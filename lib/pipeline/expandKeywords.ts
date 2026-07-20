@@ -5,7 +5,7 @@ import { relatedKeywordsStore } from "@/lib/storage";
 import type { ExpandedKeywordRaw, Intencion, RelatedKeyword, TipoKeyword } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres un especialista en SEO programático y generación de keywords para automatización de contenido. Genera variaciones para blog, comparativas, búsquedas comerciales, locales, informativas, long-tail, nicho médico/laboratorios clínicos. Clasifica cada una según intencion y tipo_keyword. SOLO JSON válido, sin markdown, sin repetir keywords, prioriza intención comercial/comparativa.";
+  "Eres un especialista en SEO programático y generación de keywords para automatización de contenido. Genera variaciones para blog, comparativas, búsquedas comerciales, locales, informativas, long-tail, nicho educación online, cursos, ebooks, marketplaces de aprendizaje (Lernymart). Clasifica cada una según intencion y tipo_keyword. SOLO JSON válido, sin markdown, sin repetir keywords, prioriza intención comercial/comparativa.";
 
 const VALID_INTENCIONES: readonly Intencion[] = [
   "informacional",
@@ -62,7 +62,7 @@ export async function expandKeywords(input: {
     instrucciones: [
       "Genera entre 15 y 25 keywords relacionadas.",
       'Formato: { "keywords": [ { "keyword": string, "intencion": "informacional"|"comercial"|"local"|"comparativa", "tipo_keyword": "precio"|"comparativa"|"local"|"informativa"|"confianza"|"resultados"|"tiempo"|"comercial" } ] }',
-      "Nicho: laboratorios clínicos / salud / Perú.",
+      "Nicho: educación online, cursos, ebooks, Lernymart / Perú.",
       "Prioriza intención comercial o comparativa cuando sea realista.",
       "No repetir keywords.",
     ],

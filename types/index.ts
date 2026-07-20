@@ -138,7 +138,23 @@ export interface ArticleRaw {
   score_seo_estimado: number;
 }
 
+export type KeywordReviewStatus =
+  | "aprobada"
+  | "descartada"
+  | "sin_datos"
+  | "error";
+
+export interface KeywordReviewItem {
+  keyword: string;
+  status: KeywordReviewStatus;
+  motivo: string;
+  interesScore?: number;
+  prioridadSeo?: string;
+  tipoContenido?: string;
+}
+
 export interface PipelineSummary {
+  tema: string;
   keywordBase: string;
   categoria: string;
   relatedKeywordsCount: number;
@@ -147,5 +163,6 @@ export interface PipelineSummary {
   briefsGenerated: number;
   articlesPublished: number;
   publishedUrls: string[];
+  keywordReviews: KeywordReviewItem[];
   errors: string[];
 }

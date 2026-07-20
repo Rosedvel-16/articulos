@@ -8,6 +8,8 @@ interface RunBody {
   tema?: unknown;
   keywordBase?: unknown;
   categoria?: unknown;
+  maxKeywordsToAnalyze?: unknown;
+  maxArticlesToPublish?: unknown;
 }
 
 export async function POST(request: NextRequest) {
@@ -28,11 +30,28 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!keywordBase) {
+      return NextResponse.json(
+        { error: "El campo palabra clave es requerido" },
+        { status: 400 }
+      );
+    }
+
+    const maxKeywordsToAnalyze =
+      typeof body.maxKeywordsToAnalyze === "number"
+        ? body.maxKeywordsToAnalyze
+        : 8;
+    const maxArticlesToPublish =
+      typeof body.maxArticlesToPublish === "number"
+        ? body.maxArticlesToPublish
+        : 1;
 
     const result = await runPipeline({
       tema,
-      keywordBase: keywordBase || undefined,
+      keywordBase,
       categoria,
+      maxKeywordsToAnalyze,
+      maxArticlesToPublish,
     });
 
     return NextResponse.json(result);

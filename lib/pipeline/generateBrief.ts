@@ -1,10 +1,16 @@
 import { randomUUID } from "crypto";
 import { callOpenRouter } from "@/lib/openrouter";
 import { articleBriefsStore } from "@/lib/storage";
-import type { ArticleBrief, BriefRaw } from "@/types";
+import type {
+  ArticleBrief,
+  BriefRaw,
+  Intencion,
+  PrioridadEditorial,
+  TipoContenido,
+} from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres un estratega SEO senior especializado en educación online, marketplaces de cursos, creación de contenido digital y marcas como Lernymart. Construye briefs SEO profesionales: el TEMA del usuario es el eje del artículo (no inventes otro enfoque), analiza intención, estructura semántica, evita keyword stuffing, prioriza CTR, títulos naturales optimizados para Google. SOLO JSON.";
+  "Eres un estratega SEO senior especializado en educación online, marketplaces de cursos, creación de contenido digital y marcas como Lernymart. Construye briefs SEO profesionales: el TEMA del usuario es el eje del artículo (no inventes otro enfoque), la keyword aprobada guía el SEO, analiza intención, estructura semántica, evita keyword stuffing, prioriza CTR, títulos naturales optimizados para Google. SOLO JSON.";
 
 function slugify(input: string): string {
   return input
@@ -20,28 +26,38 @@ export interface GenerateBriefInput {
   tema: string;
   keywordBase: string;
   categoria: string;
+  keywordRelacionada: string;
+  intencionBusqueda: Intencion;
+  tipoContenido: TipoContenido;
+  scoreOportunidad: number;
+  prioridadEditorial: PrioridadEditorial;
 }
 
 export async function generateBrief(
   input: GenerateBriefInput
 ): Promise<ArticleBrief> {
   const tema = input.tema.trim();
-  const keywordBase = input.keywordBase.trim() || tema;
+  const keywordBase = input.keywordBase.trim();
   const categoria = input.categoria.trim() || "cursos";
 
   const userPrompt = JSON.stringify({
     tema_central: tema,
-    keyword_seo_opcional: keywordBase,
+    keyword_base: keywordBase,
+    keyword_aprobada_seo: input.keywordRelacionada,
     categoria,
+    intencion_busqueda: input.intencionBusqueda,
+    tipo_contenido: input.tipoContenido,
+    prioridad_editorial: input.prioridadEditorial,
+    score_oportunidad: input.scoreOportunidad,
     mercado: "Perú / Latam",
     marca: "Lernymart",
     contexto_negocio:
       "Lernymart es una plataforma donde las personas pueden comprar y vender cursos. El blog debe aportar valor educativo y, cuando encaje naturalmente, mencionar cómo Lernymart ayuda a crear, subir o comercializar contenido/cursos.",
     formato_respuesta: {
       tema: "string — debe reflejar el tema_central del usuario",
-      titulo_h1: "string — atractivo, no obligatorio que sea igual al tema",
+      titulo_h1: "string — atractivo para CTR; NO tiene que ser igual al tema",
       estructura_h2: ["string"],
-      keyword_principal: "string",
+      keyword_principal: "string — preferir keyword_aprobada_seo",
       keywords_secundarias: ["string"],
       meta_title: "string — máximo 60 caracteres",
       meta_description: "string — máximo 155 caracteres",
@@ -49,10 +65,10 @@ export async function generateBrief(
       score_seo: "number 0-100",
     },
     reglas: [
-      "El artículo DEBE girar alrededor del tema_central ingresado por el usuario",
-      "La keyword SEO es apoyo; no reemplace el tema",
+      "El artículo DEBE girar alrededor del tema_central",
+      "La keyword_aprobada_seo debe usarse para SEO sin forzar el título",
       "Tono profesional, claro y útil",
-      "Puedes mencionar Lernymart de forma natural, sin spam",
+      "Mencionar Lernymart de forma natural, sin spam",
       "meta_title máx 60 caracteres",
       "meta_description máx 155 caracteres",
     ],
@@ -61,7 +77,9 @@ export async function generateBrief(
   const raw = await callOpenRouter<BriefRaw>(SYSTEM_PROMPT, userPrompt);
 
   const tituloH1 = String(raw.titulo_h1 ?? "").trim();
-  const slugRaw = String(raw.slug ?? (tituloH1 || tema || keywordBase)).trim();
+  const slugRaw = String(
+    raw.slug ?? (tituloH1 || tema || input.keywordRelacionada)
+  ).trim();
   const slug = slugify(slugRaw) || slugify(tema);
 
   let metaTitle = String(raw.meta_title ?? tituloH1).trim();
@@ -83,7 +101,7 @@ export async function generateBrief(
   const scoreSeo =
     typeof raw.score_seo === "number" && Number.isFinite(raw.score_seo)
       ? Math.max(0, Math.min(100, Math.round(raw.score_seo)))
-      : 70;
+      : input.scoreOportunidad;
 
   const brief: ArticleBrief = {
     idArticulo: randomUUID(),
@@ -92,7 +110,9 @@ export async function generateBrief(
     tema: String(raw.tema ?? tema).trim() || tema,
     tituloH1: tituloH1 || tema,
     estructuraH2,
-    keywordPrincipal: String(raw.keyword_principal ?? keywordBase).trim(),
+    keywordPrincipal: String(
+      raw.keyword_principal ?? input.keywordRelacionada
+    ).trim(),
     keywordsSecundarias,
     metaTitle,
     metaDescription,
