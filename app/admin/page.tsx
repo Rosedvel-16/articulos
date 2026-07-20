@@ -95,6 +95,8 @@ export default function AdminPage() {
   );
 
   const published = (result?.articlesPublished ?? 0) > 0;
+  const hasApproved = (result?.approvedCount ?? 0) > 0;
+  const generationFailed = hasApproved && !published;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
@@ -213,23 +215,23 @@ export default function AdminPage() {
 
           <aside className="border border-ink-950 bg-ink-950 px-5 py-5 text-sm text-white">
             <p className="font-semibold text-brand-400">
-              Qué tipo de keyword sí sirve
+              Qué significa “keyword válida”
             </p>
             <ul className="mt-3 space-y-2 text-white/80 leading-relaxed">
               <li>
-                <span className="text-white">Bien:</span> cortas y buscadas —{" "}
-                <span className="text-brand-400">crear ebook</span>,{" "}
-                <span className="text-brand-400">vender cursos</span>,{" "}
-                <span className="text-brand-400">curso online</span>.
+                No es “la que mejor describe tu tema”. Es la que{" "}
+                <span className="text-white">la gente busca de verdad</span> en
+                Google (volumen + intención).
               </li>
               <li>
-                <span className="text-white">Mal:</span> frases largas — “mejores
-                plataformas para crear ebooks paso a paso”. Esas casi nunca
-                tienen datos en Trends y no aprueban.
+                Ejemplo: tu tema puede ser ingresos con ebooks, pero Trends puede
+                aprobar <span className="text-brand-400">vender ebook</span> o{" "}
+                <span className="text-brand-400">curso online</span> y descartar{" "}
+                <span className="text-white">crear ebook</span> si se busca poco.
               </li>
               <li>
-                El sistema primero evalúa tu keyword base y luego variaciones
-                cortas. Solo si alguna aprueba se genera el artículo.
+                El artículo igual se escribe sobre tu tema; la keyword solo abre
+                o cierra la puerta de publicar.
               </li>
             </ul>
           </aside>
@@ -260,7 +262,9 @@ export default function AdminPage() {
                 className={`border px-5 py-5 ${
                   published
                     ? "border-ink-950 bg-ink-950 text-white"
-                    : "border-ink-300 bg-white text-ink-900"
+                    : generationFailed
+                      ? "border-ink-950 bg-white text-ink-900"
+                      : "border-ink-300 bg-white text-ink-900"
                 }`}
               >
                 <p
@@ -268,7 +272,11 @@ export default function AdminPage() {
                     published ? "text-brand-400" : "text-ink-500"
                   }`}
                 >
-                  {published ? "Artículo publicado" : "Sin publicación"}
+                  {published
+                    ? "Artículo publicado"
+                    : generationFailed
+                      ? "Keywords OK · falló la redacción"
+                      : "Sin publicación"}
                 </p>
                 <h2
                   className={`mt-2 font-display text-2xl font-semibold ${
@@ -276,8 +284,10 @@ export default function AdminPage() {
                   }`}
                 >
                   {published
-                    ? "Hay oportunidad SEO y el artículo ya está en el blog"
-                    : "Ninguna keyword pasó la evaluación SEO"}
+                    ? "El artículo ya está en el blog"
+                    : generationFailed
+                      ? "Hubo keywords aprobadas, pero no se pudo escribir el artículo"
+                      : "Ninguna keyword pasó la evaluación SEO"}
                 </h2>
                 <p
                   className={`mt-2 text-sm leading-relaxed ${
@@ -285,9 +295,52 @@ export default function AdminPage() {
                   }`}
                 >
                   {published
-                    ? "Se generó el brief y el artículo usando tu tema como eje, y la keyword aprobada para SEO."
-                    : "Prueba una keyword más corta, más buscada o más general. El tema puede quedarse igual."}
+                    ? "Se usó tu tema como eje del contenido y una keyword aprobada para SEO."
+                    : generationFailed
+                      ? "La evaluación SEO sí encontró oportunidad. Revisa el detalle del error abajo e intenta de nuevo."
+                      : "Una keyword es válida cuando Google Trends muestra suficiente interés de búsqueda (no basta con que “suene bien” o se parezca al tema)."}
                 </p>
+
+                {!published && !generationFailed && (
+                  <div className="mt-4 border border-ink-200 bg-ink-50 px-3 py-3 text-xs text-ink-700 leading-relaxed">
+                    <p className="font-semibold text-ink-950">
+                      Cómo se decide si una keyword es válida
+                    </p>
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      <li>
+                        Se mira el interés real de búsqueda (Google Trends), no
+                        si encaja con tu tema.
+                      </li>
+                      <li>
+                        Debe tener volumen mínimo y buena intención (informativa,
+                        comercial o comparativa).
+                      </li>
+                      <li>
+                        Por eso “curso online” puede aprobar y “crear ebook”
+                        puede descartarse: una se busca mucho más que la otra.
+                      </li>
+                      <li>
+                        Tu tema sigue mandando en el contenido; la keyword solo
+                        decide si conviene publicar para SEO.
+                      </li>
+                    </ul>
+                  </div>
+                )}
+
+                {generationFailed && result.errors.length > 0 && (
+                  <div className="mt-4 border border-ink-300 bg-ink-50 px-3 py-3 text-sm text-ink-800">
+                    <p className="font-semibold text-ink-950">
+                      Detalle del fallo al generar
+                    </p>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-ink-700">
+                      {result.errors
+                        .filter((e) => e.toLowerCase().includes("artículo"))
+                        .map((err) => (
+                          <li key={err}>{err}</li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div
                   className={`mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 ${

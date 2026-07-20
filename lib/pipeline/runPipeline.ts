@@ -23,13 +23,35 @@ export interface RunPipelineInput {
   maxArticlesToPublish?: number;
 }
 
+function wordCount(keyword: string): number {
+  return keyword.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function relevanceToTema(
+  keyword: string,
+  tema: string,
+  keywordBase: string
+): number {
+  const k = keyword.toLowerCase();
+  const base = keywordBase.toLowerCase();
+  let score = 0;
+  if (k === base) score += 100;
+  for (const word of base.split(/\s+/)) {
+    if (word.length > 2 && k.includes(word)) score += 15;
+  }
+  for (const word of tema.toLowerCase().split(/\s+/)) {
+    if (word.length > 3 && k.includes(word)) score += 8;
+  }
+  return score;
+}
+
 export async function runPipeline(
   input: RunPipelineInput
 ): Promise<PipelineSummary> {
   const tema = input.tema.trim();
   const keywordBase = input.keywordBase.trim();
   const categoria = input.categoria.trim() || "cursos";
-  const maxKeywordsToAnalyze = input.maxKeywordsToAnalyze ?? 8;
+  const maxKeywordsToAnalyze = input.maxKeywordsToAnalyze ?? 5;
   const maxArticlesToPublish = input.maxArticlesToPublish ?? 1;
 
   if (!tema) {
@@ -63,11 +85,13 @@ export async function runPipeline(
   summary.relatedKeywordsCount = related.length;
 
   const sortedForAnalysis = [...related].sort((a, b) => {
-    const aw = a.keyword.trim().split(/\s+/).length;
-    const bw = b.keyword.trim().split(/\s+/).length;
     if (a.keyword.toLowerCase() === keywordBase.toLowerCase()) return -1;
     if (b.keyword.toLowerCase() === keywordBase.toLowerCase()) return 1;
-    return aw - bw;
+    const rel =
+      relevanceToTema(b.keyword, tema, keywordBase) -
+      relevanceToTema(a.keyword, tema, keywordBase);
+    if (rel !== 0) return rel;
+    return wordCount(a.keyword) - wordCount(b.keyword);
   });
   const toAnalyze = sortedForAnalysis.slice(0, maxKeywordsToAnalyze);
   const decisions: ArticleDecision[] = [];
@@ -91,6 +115,9 @@ export async function runPipeline(
       if (decision.articuloAprobado) {
         summary.approvedCount += 1;
         decisions.push(decision);
+        if (decisions.length >= maxArticlesToPublish) {
+          break;
+        }
       }
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
@@ -110,6 +137,10 @@ export async function runPipeline(
 
   const priorityRank = { alta: 0, media: 1, baja: 2 } as const;
   decisions.sort((a, b) => {
+    const rel =
+      relevanceToTema(b.keywordRelacionada, tema, keywordBase) -
+      relevanceToTema(a.keywordRelacionada, tema, keywordBase);
+    if (rel !== 0) return rel;
     const p =
       priorityRank[a.prioridadEditorial] - priorityRank[b.prioridadEditorial];
     if (p !== 0) return p;
@@ -141,7 +172,7 @@ export async function runPipeline(
       const raw = err instanceof Error ? err.message : String(err);
       const motivo = humanizePipelineError(raw);
       summary.errors.push(
-        `No se pudo generar el artículo para "${decision.keywordRelacionada}": ${motivo}`
+        `No se pudo escribir el artículo con la keyword aprobada “${decision.keywordRelacionada}”: ${motivo}`
       );
     }
   }
