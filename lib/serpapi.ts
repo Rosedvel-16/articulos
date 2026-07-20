@@ -1,8 +1,3 @@
-/**
- * Cliente SerpApi Google Trends — reemplaza el nodo de tendencias del flujo n8n.
- * Parámetros alineados con el workflow original: hl=es, geo=PE, TIMESERIES, today 12-m.
- */
-
 const SERPAPI_URL = "https://serpapi.com/search.json";
 
 export interface TrendTimelinePoint {
@@ -39,9 +34,6 @@ interface SerpApiResponse {
   interest_over_time?: SerpApiInterestOverTime;
 }
 
-/**
- * Obtiene el timeline de Google Trends para una keyword (últimos 12 meses, Perú).
- */
 export async function getGoogleTrends(
   keyword: string
 ): Promise<TrendTimelinePoint[]> {

@@ -1,14 +1,11 @@
-/**
- * Etapa 4 del pipeline n8n: generar brief SEO (solo si articuloAprobado = true).
- * Equivalente al nodo LLM que escribía en la hoja "Article Briefs".
- */
 
 import { randomUUID } from "crypto";
 import { callOpenRouter } from "@/lib/openrouter";
+import { articleBriefsStore } from "@/lib/storage";
 import type { ArticleBrief, ArticleDecision, BriefRaw } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres un estratega SEO senior especializado en: contenidos médicos, laboratorios clínicos, salud, keywords transaccionales e informativas. Tu trabajo es construir briefs SEO profesionales para blogs. Debes: analizar intención de búsqueda, generar estructura semántica SEO, evitar keyword stuffing, priorizar CTR, usar lenguaje natural, generar títulos optimizados para Google. Responde SOLO en JSON válido.";
+  "Eres un estratega SEO senior en contenidos médicos, laboratorios clínicos, salud. Construye briefs SEO profesionales: analiza intención, estructura semántica, evita keyword stuffing, prioriza CTR, títulos optimizados para Google. SOLO JSON.";
 
 function slugify(input: string): string {
   return input
@@ -20,9 +17,6 @@ function slugify(input: string): string {
     .slice(0, 80);
 }
 
-/**
- * Genera un ArticleBrief a partir de una ArticleDecision aprobada.
- */
 export async function generateBrief(
   decision: ArticleDecision
 ): Promise<ArticleBrief> {
@@ -91,15 +85,16 @@ export async function generateBrief(
       ? Math.max(0, Math.min(100, Math.round(raw.score_seo)))
       : decision.scoreOportunidad;
 
-  return {
+  const brief: ArticleBrief = {
     idArticulo: randomUUID(),
     keywordBase: decision.keywordBase,
     fechaGeneracion: new Date().toISOString(),
     tema: String(raw.tema ?? decision.keywordRelacionada).trim(),
     tituloH1: tituloH1 || decision.keywordRelacionada,
     estructuraH2,
-    keywordPrincipal:
-      String(raw.keyword_principal ?? decision.keywordRelacionada).trim(),
+    keywordPrincipal: String(
+      raw.keyword_principal ?? decision.keywordRelacionada
+    ).trim(),
     keywordsSecundarias,
     metaTitle,
     metaDescription,
@@ -110,4 +105,7 @@ export async function generateBrief(
     disclaimer:
       "Este contenido es informativo y no sustituye la consulta con un profesional de la salud. Los resultados de laboratorio deben interpretarse con orientación médica.",
   };
+
+  await articleBriefsStore.insert(brief);
+  return brief;
 }

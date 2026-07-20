@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { markdownToHtml } from "@/lib/pipeline/publishArticle";
+import { markdownToHtml } from "@/lib/markdown";
 import { articlesStore } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +55,7 @@ export default async function BlogArticlePage({ params }: PageProps) {
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
       <Link
         href="/blog"
-        className="text-sm font-medium text-brand-700 hover:text-brand-600"
+        className="text-sm font-medium text-ink-950 underline decoration-brand-400 underline-offset-2 hover:decoration-brand-500"
       >
         ← Volver al blog
       </Link>
@@ -80,7 +80,7 @@ export default async function BlogArticlePage({ params }: PageProps) {
       />
 
       {article.faq.length > 0 && (
-        <section className="mt-14 border-t border-brand-200 pt-10">
+        <section className="mt-14 border-t border-ink-200 pt-10">
           <h2 className="font-display text-2xl font-semibold text-ink-950">
             Preguntas frecuentes
           </h2>
@@ -98,9 +98,11 @@ export default async function BlogArticlePage({ params }: PageProps) {
       )}
 
       {article.cta && (
-        <aside className="mt-12 rounded-xl bg-brand-900 px-6 py-8 text-center text-white">
-          <p className="font-display text-xl font-semibold">Próximo paso</p>
-          <p className="mx-auto mt-3 max-w-lg text-brand-100 leading-relaxed">
+        <aside className="mt-12 rounded-xl border border-ink-950 bg-ink-950 px-6 py-8 text-center text-white">
+          <p className="font-display text-xl font-semibold text-brand-400">
+            Próximo paso
+          </p>
+          <p className="mx-auto mt-3 max-w-lg text-white/85 leading-relaxed">
             {article.cta}
           </p>
         </aside>

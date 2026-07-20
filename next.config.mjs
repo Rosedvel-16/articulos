@@ -1,9 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Ensure data/ is available at runtime for local filesystem storage
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
-};
+const nextConfig = {};
 
 export default nextConfig;

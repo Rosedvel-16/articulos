@@ -1,8 +1,5 @@
-/**
- * Etapa 3 del pipeline n8n: decidir si se aprueba el artículo.
- * Replica EXACTAMENTE las reglas de aprobación del workflow original.
- */
 
+import { articleDecisionsStore } from "@/lib/storage";
 import type {
   ArticleDecision,
   PrioridadEditorial,
@@ -10,10 +7,9 @@ import type {
   TrendAnalysis,
 } from "@/types";
 
-/**
- * Aplica reglas de aprobación sobre un TrendAnalysis y devuelve ArticleDecision.
- */
-export function scoreAndApprove(analysis: TrendAnalysis): ArticleDecision {
+export async function scoreAndApprove(
+  analysis: TrendAnalysis
+): Promise<ArticleDecision> {
   const {
     statusAnalisis,
     interesScore,
@@ -23,11 +19,6 @@ export function scoreAndApprove(analysis: TrendAnalysis): ArticleDecision {
     tendencia,
   } = analysis;
 
-  // Regla base (n8n):
-  // aprobado = true si statusAnalisis === 'valido'
-  //   AND interesScore >= 15
-  //   AND (prioridadSeo === 'alta' OR interesScore >= 30)
-  //   AND intencionBusqueda en ['informacional','comercial','comparativa']
   let aprobado =
     statusAnalisis === "valido" &&
     interesScore >= 15 &&
@@ -36,18 +27,14 @@ export function scoreAndApprove(analysis: TrendAnalysis): ArticleDecision {
       intencionBusqueda === "comercial" ||
       intencionBusqueda === "comparativa");
 
-  // Boost comercial: si interesScore >= 10 AND tipo en ['precio','comercial'] → aprobado = true
   if (interesScore >= 10 && (tipo === "precio" || tipo === "comercial")) {
     aprobado = true;
   }
 
-  // Penalización: si tendencia === 'bajada' AND interesScore < 25 → aprobado = false
-  // (esto sobreescribe lo anterior)
   if (tendencia === "bajada" && interesScore < 25) {
     aprobado = false;
   }
 
-  // tipoContenido
   let tipoContenido: TipoContenido;
   if (!aprobado) {
     tipoContenido = "descartado";
@@ -59,7 +46,6 @@ export function scoreAndApprove(analysis: TrendAnalysis): ArticleDecision {
     tipoContenido = "articulo_blog";
   }
 
-  // prioridadEditorial
   let prioridadEditorial: PrioridadEditorial = "baja";
   if (interesScore >= 50) prioridadEditorial = "alta";
   else if (interesScore >= 25) prioridadEditorial = "media";
@@ -82,11 +68,14 @@ export function scoreAndApprove(analysis: TrendAnalysis): ArticleDecision {
     motivos.push("no cumple umbrales de aprobación");
   }
 
-  return {
+  const decision: ArticleDecision = {
     ...analysis,
     articuloAprobado: aprobado,
     tipoContenido,
     prioridadEditorial,
     motivoDecision: motivos.join("; "),
   };
+
+  await articleDecisionsStore.insert(decision);
+  return decision;
 }

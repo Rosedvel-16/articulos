@@ -52,8 +52,8 @@ export default function AdminPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 md:px-6 md:py-16">
       <div className="mb-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">
-          Panel interno
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-950">
+          <span className="rounded-sm bg-brand-400 px-1.5 py-0.5">Panel interno</span>
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold text-ink-950 md:text-4xl">
           Generar artículo SEO
@@ -66,7 +66,7 @@ export default function AdminPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-xl border border-brand-200/80 bg-white/80 p-6 shadow-sm backdrop-blur"
+        className="space-y-5 rounded-xl border border-ink-200 bg-white p-6 shadow-sm"
       >
         <div>
           <label
@@ -83,7 +83,7 @@ export default function AdminPage() {
             onChange={(e) => setKeywordBase(e.target.value)}
             placeholder="ej. precio hemograma completo Lima"
             disabled={isLoading}
-            className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-500/30 placeholder:text-ink-400 focus:border-brand-500 focus:ring-2 disabled:opacity-60"
+            className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 placeholder:text-ink-400 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
           />
         </div>
 
@@ -101,18 +101,18 @@ export default function AdminPage() {
             onChange={(e) => setCategoria(e.target.value)}
             placeholder="laboratorios clínicos"
             disabled={isLoading}
-            className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-500/30 placeholder:text-ink-400 focus:border-brand-500 focus:ring-2 disabled:opacity-60"
+            className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 placeholder:text-ink-400 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
           />
         </div>
 
         <button
           type="submit"
           disabled={isLoading || !keywordBase.trim()}
-          className="inline-flex w-full items-center justify-center rounded-md bg-brand-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center rounded-md bg-ink-950 px-4 py-3 text-sm font-semibold text-brand-400 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? (
             <span className="inline-flex items-center gap-2">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-400/30 border-t-brand-400" />
               Generando… (puede tardar 1–3 min)
             </span>
           ) : (
@@ -132,9 +132,9 @@ export default function AdminPage() {
       )}
 
       {status === "success" && result && (
-        <div className="mt-6 rounded-lg border border-brand-200 bg-brand-50/80 px-4 py-4 text-sm text-ink-800">
-          <p className="font-semibold text-brand-900">Pipeline completado</p>
-          <ul className="mt-3 space-y-1 text-ink-700">
+        <div className="mt-6 rounded-lg border border-ink-950 bg-brand-100 px-4 py-4 text-sm text-ink-900">
+          <p className="font-semibold text-ink-950">Pipeline completado</p>
+          <ul className="mt-3 space-y-1 text-ink-800">
             <li>Keywords relacionadas: {result.relatedKeywordsCount}</li>
             <li>Tendencias analizadas: {result.trendsAnalyzed}</li>
             <li>Aprobadas: {result.approvedCount}</li>
@@ -144,19 +144,19 @@ export default function AdminPage() {
 
           {result.publishedUrls.length > 0 ? (
             <div className="mt-4 space-y-2">
-              <p className="font-semibold text-brand-900">Artículos publicados:</p>
+              <p className="font-semibold text-ink-950">Artículos publicados:</p>
               {result.publishedUrls.map((url) => (
                 <Link
                   key={url}
                   href={url}
-                  className="block font-medium text-brand-700 underline underline-offset-2 hover:text-brand-600"
+                  className="block font-medium text-ink-950 underline decoration-brand-400 underline-offset-2 hover:decoration-brand-500"
                 >
                   {url}
                 </Link>
               ))}
             </div>
           ) : (
-            <p className="mt-3 text-ink-600">
+            <p className="mt-3 text-ink-700">
               No se publicó ningún artículo (ninguna keyword pasó la aprobación o
               hubo errores en la generación).
             </p>
@@ -164,10 +164,10 @@ export default function AdminPage() {
 
           {result.errors.length > 0 && (
             <details className="mt-4">
-              <summary className="cursor-pointer font-medium text-amber-800">
+              <summary className="cursor-pointer font-medium text-ink-950">
                 Advertencias ({result.errors.length})
               </summary>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-900/90">
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-800">
                 {result.errors.map((err) => (
                   <li key={err}>{err}</li>
                 ))}

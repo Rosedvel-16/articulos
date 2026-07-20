@@ -1,7 +1,3 @@
-/**
- * Tipos que replican las "hojas" del Google Sheets usado en el flujo n8n original.
- * Cada interfaz corresponde a una tabla del pipeline SEO de lernymart.
- */
 
 export type Intencion =
   | "informacional"
@@ -93,16 +89,30 @@ export interface ArticleBrief {
   disclaimer: string;
 }
 
-export interface Article extends ArticleBrief {
+export interface Article {
+  id: string;
+  keywordBase: string;
+  fechaGeneracion: string;
+  tema: string;
+  tituloH1: string;
+  estructuraH2: string[];
+  keywordPrincipal: string;
+  keywordsSecundarias: string[];
+  metaTitle: string;
+  metaDescription: string;
+  slug: string;
+  scoreSeo: number;
   articuloMd: string;
   faq: FaqItem[];
   cta: string;
   scoreSeoEstimado: number;
+  estado: string;
   fechaPublicacion: string;
-  urlPublicacion: string;
+  urlPublicacion?: string;
+  autor?: string;
+  disclaimer?: string;
 }
 
-/** Formato crudo que OpenRouter puede devolver al expandir keywords */
 export interface ExpandedKeywordRaw {
   keyword: string;
   intencion: Intencion;
@@ -138,13 +148,4 @@ export interface PipelineSummary {
   articlesPublished: number;
   publishedUrls: string[];
   errors: string[];
-}
-
-export interface DatabaseSchema {
-  keywordSeeds: KeywordSeed[];
-  relatedKeywords: RelatedKeyword[];
-  trendAnalyses: TrendAnalysis[];
-  articleDecisions: ArticleDecision[];
-  articleBriefs: ArticleBrief[];
-  articles: Article[];
 }

@@ -34,23 +34,26 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${sans.variable} font-sans antialiased`}
       >
-        <header className="border-b border-brand-200/60 bg-white/60 backdrop-blur-md">
+        <header className="border-b border-ink-200 bg-white/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 md:px-6">
             <Link href="/" className="group flex items-baseline gap-2">
-              <span className="font-display text-2xl font-semibold tracking-tight text-brand-800 group-hover:text-brand-700">
+              <span className="font-display text-2xl font-semibold tracking-tight text-ink-950 group-hover:text-ink-800">
                 lernymart
               </span>
-              <span className="text-xs uppercase tracking-[0.18em] text-ink-400">
+              <span className="rounded-sm bg-brand-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-950">
                 SEO lab
               </span>
             </Link>
-            <nav className="flex items-center gap-5 text-sm font-medium text-ink-600">
-              <Link href="/blog" className="hover:text-brand-700 transition-colors">
+            <nav className="flex items-center gap-5 text-sm font-medium text-ink-700">
+              <Link
+                href="/blog"
+                className="transition-colors hover:text-ink-950"
+              >
                 Blog
               </Link>
               <Link
                 href="/admin"
-                className="rounded-md bg-brand-700 px-3 py-1.5 text-white hover:bg-brand-600 transition-colors"
+                className="rounded-md bg-ink-950 px-3 py-1.5 text-brand-400 transition-colors hover:bg-ink-800"
               >
                 Admin
               </Link>
@@ -58,8 +61,9 @@ export default function RootLayout({
           </div>
         </header>
         <main>{children}</main>
-        <footer className="mt-20 border-t border-brand-200/50 py-8 text-center text-sm text-ink-400">
-          Prototipo interno · Pipeline SEO lernymart · No es el sitio de producción
+        <footer className="mt-20 border-t border-ink-200 py-8 text-center text-sm text-ink-500">
+          Prototipo interno · Pipeline SEO lernymart · No es el sitio de
+          producción
         </footer>
       </body>
     </html>

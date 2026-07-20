@@ -11,7 +11,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/blog"
-        className="mt-6 inline-block text-sm font-semibold text-brand-700 underline underline-offset-2"
+        className="mt-6 inline-block text-sm font-semibold text-ink-950 underline decoration-brand-400 underline-offset-2"
       >
         Ir al blog
       </Link>

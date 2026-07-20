@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const articles = await articlesStore.getPublished();
-    // Más recientes primero
     articles.sort(
       (a, b) =>
         Date.parse(b.fechaPublicacion || b.fechaGeneracion) -

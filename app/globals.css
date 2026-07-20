@@ -3,19 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --surface: #f3f7f6;
-  --surface-deep: #0c2422;
-  --accent: #2f8f7e;
-  --accent-soft: #aee0d4;
-  --ink: #22272d;
+  --surface: #ffffff;
+  --surface-deep: #0a0a0a;
+  --accent: #ffd600;
+  --accent-soft: #fff8d6;
+  --ink: #0a0a0a;
 }
 
 body {
   color: var(--ink);
   background:
-    radial-gradient(1200px 600px at 10% -10%, #d5efe9 0%, transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, #e8f0f4 0%, transparent 50%),
-    linear-gradient(180deg, #f7faf9 0%, #eef3f2 40%, #f5f7f6 100%);
+    radial-gradient(1100px 520px at 8% -8%, #fff8d6 0%, transparent 55%),
+    radial-gradient(800px 420px at 100% 0%, #fffef5 0%, transparent 48%),
+    linear-gradient(180deg, #ffffff 0%, #fafafa 45%, #ffffff 100%);
   min-height: 100vh;
 }
 
@@ -49,7 +49,7 @@ body {
   }
 
   .prose-article a {
-    @apply text-brand-700 underline underline-offset-2 hover:text-brand-600;
+    @apply text-ink-950 underline decoration-brand-400 underline-offset-2 hover:decoration-brand-500;
   }
 
   .prose-article strong {

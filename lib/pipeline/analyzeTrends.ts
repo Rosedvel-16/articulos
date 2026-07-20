@@ -1,10 +1,7 @@
-/**
- * Etapa 2 del pipeline n8n: análisis de tendencias con Google Trends + scoring.
- * Replica EXACTAMENTE la lógica de scoring del workflow original.
- */
 
 import { randomUUID } from "crypto";
 import { getGoogleTrends, type TrendTimelinePoint } from "@/lib/serpapi";
+import { trendAnalysesStore } from "@/lib/storage";
 import type {
   Estacionalidad,
   PrioridadSeo,
@@ -19,7 +16,6 @@ function average(values: number[]): number {
 }
 
 function extractMonthLabel(dateStr: string): string {
-  // SerpApi suele devolver rangos tipo "Jan 5 – Jan 11, 2025" o timestamps.
   const months = [
     "enero",
     "febrero",
@@ -62,10 +58,6 @@ function extractMonthLabel(dateStr: string): string {
   return dateStr || "desconocido";
 }
 
-/**
- * Scoring puro sobre un timeline — testeable sin red.
- * Lógica n8n (pseudocódigo → TypeScript estricto).
- */
 export function scoreTimeline(timeline: TrendTimelinePoint[]): {
   averageScore: number;
   maxScore: number;
@@ -80,7 +72,6 @@ export function scoreTimeline(timeline: TrendTimelinePoint[]): {
   const averageScore = average(values);
   const maxScore = values.length > 0 ? Math.max(...values) : 0;
 
-  // peakMonths = meses donde valor >= maxScore * 0.8 y > 0
   const peakMonths = Array.from(
     new Set(
       timeline
@@ -89,27 +80,22 @@ export function scoreTimeline(timeline: TrendTimelinePoint[]): {
     )
   );
 
-  // tendencia = subida si último > primero, bajada si menor, si no estable
   const first = values[0] ?? 0;
   const last = values[values.length - 1] ?? 0;
   let tendencia: Tendencia = "estable";
   if (last > first) tendencia = "subida";
   else if (last < first) tendencia = "bajada";
 
-  // scoreOportunidad = round(averageScore * 0.4 + maxScore * 0.6)
   const scoreOportunidad = Math.round(averageScore * 0.4 + maxScore * 0.6);
 
-  // estacionalidad
   let estacionalidad: Estacionalidad = "baja";
   if (maxScore >= 70) estacionalidad = "alta";
   else if (maxScore >= 30) estacionalidad = "media";
 
-  // prioridadSeo
   let prioridadSeo: PrioridadSeo = "baja";
   if (scoreOportunidad >= 70) prioridadSeo = "alta";
   else if (scoreOportunidad >= 40) prioridadSeo = "media";
 
-  // statusAnalisis
   const statusAnalisis: "bajo_volumen" | "valido" =
     averageScore <= 5 ? "bajo_volumen" : "valido";
 
@@ -125,16 +111,13 @@ export function scoreTimeline(timeline: TrendTimelinePoint[]): {
   };
 }
 
-/**
- * Analiza tendencias de Google Trends para una RelatedKeyword y devuelve TrendAnalysis.
- */
 export async function analyzeTrends(
   related: RelatedKeyword
 ): Promise<TrendAnalysis> {
   const timeline = await getGoogleTrends(related.keyword);
   const scored = scoreTimeline(timeline);
 
-  return {
+  const analysis: TrendAnalysis = {
     id: randomUUID(),
     keywordBase: related.keywordBase,
     categoria: related.categoria,
@@ -151,4 +134,7 @@ export async function analyzeTrends(
     statusAnalisis: scored.statusAnalisis,
     fechaConsulta: new Date().toISOString(),
   };
+
+  await trendAnalysesStore.insert(analysis);
+  return analysis;
 }

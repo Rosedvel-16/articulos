@@ -1,14 +1,11 @@
-/**
- * Etapa 1 del pipeline n8n: expandir keyword base en variaciones SEO.
- * Equivalente al nodo LLM que escribía en la hoja "Related Keywords".
- */
 
 import { randomUUID } from "crypto";
 import { callOpenRouter } from "@/lib/openrouter";
+import { relatedKeywordsStore } from "@/lib/storage";
 import type { ExpandedKeywordRaw, Intencion, RelatedKeyword, TipoKeyword } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres un especialista en SEO programático y generación de keywords para automatización de contenido. Tu tarea es expandir una keyword base en múltiples variaciones SEO útiles para: artículos de blog, comparativas, búsquedas comerciales, búsquedas locales, intención informativa, SEO long-tail. Debes generar keywords: naturales, realistas, orientadas a búsquedas reales de usuarios, relacionadas al nicho médico/laboratorios clínicos. Clasifica cada keyword según: intencion, tipo_keyword. IMPORTANTE: NO expliques nada, NO uses markdown, SOLO devuelve JSON válido, no repitas keywords, prioriza búsquedas con intención comercial o comparativa.";
+  "Eres un especialista en SEO programático y generación de keywords para automatización de contenido. Genera variaciones para blog, comparativas, búsquedas comerciales, locales, informativas, long-tail, nicho médico/laboratorios clínicos. Clasifica cada una según intencion y tipo_keyword. SOLO JSON válido, sin markdown, sin repetir keywords, prioriza intención comercial/comparativa.";
 
 const VALID_INTENCIONES: readonly Intencion[] = [
   "informacional",
@@ -53,9 +50,6 @@ interface ExpandResponse {
   related_keywords?: ExpandedKeywordRaw[];
 }
 
-/**
- * Expande una keyword base en 15–25 RelatedKeyword tipadas.
- */
 export async function expandKeywords(input: {
   keywordBase: string;
   categoria: string;
@@ -67,7 +61,7 @@ export async function expandKeywords(input: {
     categoria,
     instrucciones: [
       "Genera entre 15 y 25 keywords relacionadas.",
-      "Formato de respuesta: { \"keywords\": [ { \"keyword\": string, \"intencion\": \"informacional\"|\"comercial\"|\"local\"|\"comparativa\", \"tipo_keyword\": \"precio\"|\"comparativa\"|\"local\"|\"informativa\"|\"confianza\"|\"resultados\"|\"tiempo\"|\"comercial\" } ] }",
+      'Formato: { "keywords": [ { "keyword": string, "intencion": "informacional"|"comercial"|"local"|"comparativa", "tipo_keyword": "precio"|"comparativa"|"local"|"informativa"|"confianza"|"resultados"|"tiempo"|"comercial" } ] }',
       "Nicho: laboratorios clínicos / salud / Perú.",
       "Prioriza intención comercial o comparativa cuando sea realista.",
       "No repetir keywords.",
@@ -94,20 +88,22 @@ export async function expandKeywords(input: {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    results.push({
+    const row: RelatedKeyword = {
       id: randomUUID(),
       keywordBase,
       categoria,
       keyword,
       intencion: normalizeIntencion(item.intencion),
       tipoKeyword: normalizeTipo(item.tipo_keyword),
-    });
+    };
+
+    await relatedKeywordsStore.insert(row);
+    results.push(row);
 
     if (results.length >= 25) break;
   }
 
   if (results.length < 15) {
-    // No abortamos: el modelo a veces devuelve menos; seguimos con lo disponible.
     console.warn(
       `expandKeywords: se esperaban 15–25 keywords, se obtuvieron ${results.length}`
     );

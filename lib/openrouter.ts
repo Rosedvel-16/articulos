@@ -1,8 +1,3 @@
-/**
- * Cliente OpenRouter — reemplaza los nodos LLM del flujo n8n.
- * Usa response_format json_object para forzar salida JSON parseable.
- */
-
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
 
@@ -30,9 +25,6 @@ interface OpenRouterResponse {
   };
 }
 
-/**
- * Llama a OpenRouter Chat Completions y devuelve el JSON parseado del mensaje.
- */
 export async function callOpenRouter<T = unknown>(
   systemPrompt: string,
   userPrompt: string,
@@ -105,7 +97,6 @@ export async function callOpenRouter<T = unknown>(
     );
   }
 
-  // Algunos modelos envuelven el JSON en fences markdown; los limpiamos.
   const cleaned = content
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "")
