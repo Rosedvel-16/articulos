@@ -34,25 +34,56 @@ interface SerpApiResponse {
   interest_over_time?: SerpApiInterestOverTime;
 }
 
-export async function getGoogleTrends(
-  keyword: string
-): Promise<TrendTimelinePoint[]> {
-  const apiKey = process.env.SERPAPI_API_KEY;
-  if (!apiKey) {
-    throw new SerpApiError(
-      "Falta SERPAPI_API_KEY. Copia .env.local.example a .env.local y configura la clave."
-    );
-  }
+function mapTimeline(
+  timelineData: NonNullable<SerpApiInterestOverTime["timeline_data"]>
+): TrendTimelinePoint[] {
+  return timelineData.map((point) => {
+    const extracted = point.values?.[0]?.extracted_value;
+    const rawValue = point.values?.[0]?.value;
+    let value = 0;
 
+    if (typeof extracted === "number") {
+      value = extracted;
+    } else if (typeof rawValue === "number") {
+      value = rawValue;
+    } else if (typeof rawValue === "string") {
+      const n = Number.parseInt(rawValue.replace(/[^\d.-]/g, ""), 10);
+      value = Number.isFinite(n) ? n : 0;
+    }
+
+    return {
+      date: point.date ?? point.timestamp ?? "",
+      timestamp: point.timestamp,
+      value,
+    };
+  });
+}
+
+function isNoResultsError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("hasn't returned any results") ||
+    m.includes("has not returned any results") ||
+    m.includes("no results")
+  );
+}
+
+async function fetchTrendsOnce(
+  keyword: string,
+  apiKey: string,
+  geo: string | null
+): Promise<TrendTimelinePoint[]> {
   const params = new URLSearchParams({
     engine: "google_trends",
     q: keyword,
     hl: "es",
-    geo: "PE",
     data_type: "TIMESERIES",
     date: "today 12-m",
     api_key: apiKey,
   });
+  if (geo) {
+    params.set("geo", geo);
+  }
 
   let response: Response;
   try {
@@ -87,29 +118,34 @@ export async function getGoogleTrends(
   }
 
   if (parsed.error) {
+    if (isNoResultsError(parsed.error)) {
+      return [];
+    }
     throw new SerpApiError(parsed.error, response.status, rawBody);
   }
 
-  const timelineData = parsed.interest_over_time?.timeline_data ?? [];
+  return mapTimeline(parsed.interest_over_time?.timeline_data ?? []);
+}
 
-  return timelineData.map((point) => {
-    const extracted = point.values?.[0]?.extracted_value;
-    const rawValue = point.values?.[0]?.value;
-    let value = 0;
+export async function getGoogleTrends(
+  keyword: string
+): Promise<TrendTimelinePoint[]> {
+  const apiKey = process.env.SERPAPI_API_KEY;
+  if (!apiKey) {
+    throw new SerpApiError(
+      "Falta SERPAPI_API_KEY. Configúrala en Vercel o .env.local."
+    );
+  }
 
-    if (typeof extracted === "number") {
-      value = extracted;
-    } else if (typeof rawValue === "number") {
-      value = rawValue;
-    } else if (typeof rawValue === "string") {
-      const n = Number.parseInt(rawValue.replace(/[^\d.-]/g, ""), 10);
-      value = Number.isFinite(n) ? n : 0;
-    }
+  const peTimeline = await fetchTrendsOnce(keyword, apiKey, "PE");
+  if (peTimeline.length > 0 && peTimeline.some((p) => p.value > 0)) {
+    return peTimeline;
+  }
 
-    return {
-      date: point.date ?? point.timestamp ?? "",
-      timestamp: point.timestamp,
-      value,
-    };
-  });
+  const worldTimeline = await fetchTrendsOnce(keyword, apiKey, null);
+  if (worldTimeline.length > 0) {
+    return worldTimeline;
+  }
+
+  return [];
 }

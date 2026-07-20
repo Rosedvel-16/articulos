@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
+import { ARTICLE_CATEGORIES } from "@/lib/categories";
 import type { KeywordReviewItem, PipelineSummary } from "@/types";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -162,6 +163,13 @@ export default function AdminPage() {
                 disabled={isLoading}
                 className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 placeholder:text-ink-400 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
               />
+              <p className="mt-1.5 text-xs text-ink-500">
+                Ideal: 2 a 4 palabras. Ejemplos que suelen funcionar:{" "}
+                <span className="text-ink-800">crear ebook</span>,{" "}
+                <span className="text-ink-800">vender cursos</span>,{" "}
+                <span className="text-ink-800">curso online</span>,{" "}
+                <span className="text-ink-800">hacer un ebook</span>.
+              </p>
             </div>
 
             <div>
@@ -171,15 +179,20 @@ export default function AdminPage() {
               >
                 Categoría
               </label>
-              <input
+              <select
                 id="categoria"
                 name="categoria"
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
-                placeholder="cursos"
                 disabled={isLoading}
-                className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 placeholder:text-ink-400 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
-              />
+                className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
+              >
+                {ARTICLE_CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <button
@@ -200,22 +213,23 @@ export default function AdminPage() {
 
           <aside className="border border-ink-950 bg-ink-950 px-5 py-5 text-sm text-white">
             <p className="font-semibold text-brand-400">
-              Cuidado al elegir la palabra clave
+              Qué tipo de keyword sí sirve
             </p>
             <ul className="mt-3 space-y-2 text-white/80 leading-relaxed">
               <li>
-                Usa búsquedas reales y concretas (ej.{" "}
-                <span className="text-white">crear ebook</span>,{" "}
-                <span className="text-white">vender cursos online</span>).
+                <span className="text-white">Bien:</span> cortas y buscadas —{" "}
+                <span className="text-brand-400">crear ebook</span>,{" "}
+                <span className="text-brand-400">vender cursos</span>,{" "}
+                <span className="text-brand-400">curso online</span>.
               </li>
               <li>
-                Evita frases muy largas o demasiado específicas: si Google Trends
-                no tiene datos en Perú, la keyword se descarta y no se publica
-                artículo.
+                <span className="text-white">Mal:</span> frases largas — “mejores
+                plataformas para crear ebooks paso a paso”. Esas casi nunca
+                tienen datos en Trends y no aprueban.
               </li>
               <li>
-                Solo las keywords aprobadas por volumen e intención SEO avanzan
-                a brief y publicación.
+                El sistema primero evalúa tu keyword base y luego variaciones
+                cortas. Solo si alguna aprueba se genera el artículo.
               </li>
             </ul>
           </aside>

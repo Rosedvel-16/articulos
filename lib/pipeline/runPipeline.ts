@@ -62,7 +62,14 @@ export async function runPipeline(
   const related = await expandKeywords({ keywordBase, categoria });
   summary.relatedKeywordsCount = related.length;
 
-  const toAnalyze = related.slice(0, maxKeywordsToAnalyze);
+  const sortedForAnalysis = [...related].sort((a, b) => {
+    const aw = a.keyword.trim().split(/\s+/).length;
+    const bw = b.keyword.trim().split(/\s+/).length;
+    if (a.keyword.toLowerCase() === keywordBase.toLowerCase()) return -1;
+    if (b.keyword.toLowerCase() === keywordBase.toLowerCase()) return 1;
+    return aw - bw;
+  });
+  const toAnalyze = sortedForAnalysis.slice(0, maxKeywordsToAnalyze);
   const decisions: ArticleDecision[] = [];
 
   for (const rk of toAnalyze) {

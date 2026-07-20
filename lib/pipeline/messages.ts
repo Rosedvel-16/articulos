@@ -6,7 +6,7 @@ export function humanizePipelineError(raw: string): string {
     msg.includes("has not returned any results") ||
     msg.includes("no results")
   ) {
-    return "Google Trends no encontró volumen de búsqueda suficiente en Perú para esta keyword.";
+    return "No hay datos de búsqueda para esta keyword. Prueba una más corta (2–4 palabras), por ejemplo: crear ebook, vender cursos, curso online.";
   }
   if (msg.includes("serpapi") && msg.includes("api_key")) {
     return "Hay un problema con la clave de SerpApi. Revisa SERPAPI_API_KEY en Vercel.";
