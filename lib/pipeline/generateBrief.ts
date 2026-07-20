@@ -1,11 +1,10 @@
-
 import { randomUUID } from "crypto";
 import { callOpenRouter } from "@/lib/openrouter";
 import { articleBriefsStore } from "@/lib/storage";
-import type { ArticleBrief, ArticleDecision, BriefRaw } from "@/types";
+import type { ArticleBrief, BriefRaw } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres un estratega SEO senior en contenidos médicos, laboratorios clínicos, salud. Construye briefs SEO profesionales: analiza intención, estructura semántica, evita keyword stuffing, prioriza CTR, títulos optimizados para Google. SOLO JSON.";
+  "Eres un estratega SEO senior especializado en educación online, marketplaces de cursos, creación de contenido digital y marcas como Lernymart. Construye briefs SEO profesionales: el TEMA del usuario es el eje del artículo (no inventes otro enfoque), analiza intención, estructura semántica, evita keyword stuffing, prioriza CTR, títulos naturales optimizados para Google. SOLO JSON.";
 
 function slugify(input: string): string {
   return input
@@ -17,29 +16,30 @@ function slugify(input: string): string {
     .slice(0, 80);
 }
 
+export interface GenerateBriefInput {
+  tema: string;
+  keywordBase: string;
+  categoria: string;
+}
+
 export async function generateBrief(
-  decision: ArticleDecision
+  input: GenerateBriefInput
 ): Promise<ArticleBrief> {
-  if (!decision.articuloAprobado) {
-    throw new Error(
-      "generateBrief: solo se ejecuta para ArticleDecision con articuloAprobado=true"
-    );
-  }
+  const tema = input.tema.trim();
+  const keywordBase = input.keywordBase.trim() || tema;
+  const categoria = input.categoria.trim() || "cursos";
 
   const userPrompt = JSON.stringify({
-    keyword_base: decision.keywordBase,
-    keyword_relacionada: decision.keywordRelacionada,
-    categoria: decision.categoria,
-    intencion_busqueda: decision.intencionBusqueda,
-    tipo_keyword: decision.tipo,
-    tipo_contenido: decision.tipoContenido,
-    prioridad_editorial: decision.prioridadEditorial,
-    score_oportunidad: decision.scoreOportunidad,
-    mercado: "Perú",
-    marca: "lernymart",
+    tema_central: tema,
+    keyword_seo_opcional: keywordBase,
+    categoria,
+    mercado: "Perú / Latam",
+    marca: "Lernymart",
+    contexto_negocio:
+      "Lernymart es una plataforma donde las personas pueden comprar y vender cursos. El blog debe aportar valor educativo y, cuando encaje naturalmente, mencionar cómo Lernymart ayuda a crear, subir o comercializar contenido/cursos.",
     formato_respuesta: {
-      tema: "string",
-      titulo_h1: "string — optimizado para CTR",
+      tema: "string — debe reflejar el tema_central del usuario",
+      titulo_h1: "string — atractivo, no obligatorio que sea igual al tema",
       estructura_h2: ["string"],
       keyword_principal: "string",
       keywords_secundarias: ["string"],
@@ -49,10 +49,10 @@ export async function generateBrief(
       score_seo: "number 0-100",
     },
     reglas: [
-      "Contenido orientado a Perú",
-      "Sonar profesional",
-      "Evitar claims médicos peligrosos",
-      "No inventar datos clínicos",
+      "El artículo DEBE girar alrededor del tema_central ingresado por el usuario",
+      "La keyword SEO es apoyo; no reemplace el tema",
+      "Tono profesional, claro y útil",
+      "Puedes mencionar Lernymart de forma natural, sin spam",
       "meta_title máx 60 caracteres",
       "meta_description máx 155 caracteres",
     ],
@@ -61,8 +61,8 @@ export async function generateBrief(
   const raw = await callOpenRouter<BriefRaw>(SYSTEM_PROMPT, userPrompt);
 
   const tituloH1 = String(raw.titulo_h1 ?? "").trim();
-  const slugRaw = String(raw.slug ?? tituloH1).trim();
-  const slug = slugify(slugRaw) || slugify(decision.keywordRelacionada);
+  const slugRaw = String(raw.slug ?? (tituloH1 || tema || keywordBase)).trim();
+  const slug = slugify(slugRaw) || slugify(tema);
 
   let metaTitle = String(raw.meta_title ?? tituloH1).trim();
   if (metaTitle.length > 60) metaTitle = metaTitle.slice(0, 57) + "...";
@@ -83,27 +83,25 @@ export async function generateBrief(
   const scoreSeo =
     typeof raw.score_seo === "number" && Number.isFinite(raw.score_seo)
       ? Math.max(0, Math.min(100, Math.round(raw.score_seo)))
-      : decision.scoreOportunidad;
+      : 70;
 
   const brief: ArticleBrief = {
     idArticulo: randomUUID(),
-    keywordBase: decision.keywordBase,
+    keywordBase,
     fechaGeneracion: new Date().toISOString(),
-    tema: String(raw.tema ?? decision.keywordRelacionada).trim(),
-    tituloH1: tituloH1 || decision.keywordRelacionada,
+    tema: String(raw.tema ?? tema).trim() || tema,
+    tituloH1: tituloH1 || tema,
     estructuraH2,
-    keywordPrincipal: String(
-      raw.keyword_principal ?? decision.keywordRelacionada
-    ).trim(),
+    keywordPrincipal: String(raw.keyword_principal ?? keywordBase).trim(),
     keywordsSecundarias,
     metaTitle,
     metaDescription,
     slug,
     scoreSeo,
     estado: "brief_generado",
-    autor: "lernymart SEO Pipeline",
+    autor: "Lernymart",
     disclaimer:
-      "Este contenido es informativo y no sustituye la consulta con un profesional de la salud. Los resultados de laboratorio deben interpretarse con orientación médica.",
+      "Contenido informativo de Lernymart. Las decisiones de compra o venta de cursos son responsabilidad del usuario.",
   };
 
   await articleBriefsStore.insert(brief);

@@ -1,4 +1,3 @@
-
 import { randomUUID } from "crypto";
 import { marked } from "marked";
 import { callOpenRouter } from "@/lib/openrouter";
@@ -6,7 +5,7 @@ import { articlesStore } from "@/lib/storage";
 import type { Article, ArticleBrief, ArticleRaw, FaqItem } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres redactor SEO experto en salud y laboratorios clínicos. Contenido útil, humano, optimizado SEO, lenguaje claro, sin relleno, sin repetir keywords. Markdown con H2/H3, introducción atractiva, conclusión con CTA suave, listas cuando sea útil, NO inventar datos médicos, NO diagnósticos. Estructura: Introducción, Desarrollo por H2, FAQs, Conclusión.";
+  "Eres redactor SEO experto en educación online, creación de cursos, ebooks y marketplaces como Lernymart. Contenido útil, humano, optimizado SEO, lenguaje claro, sin relleno, sin repetir keywords. Markdown con H2/H3, introducción atractiva, conclusión con CTA suave hacia Lernymart cuando encaje, listas cuando sea útil. El TEMA del brief es el eje del artículo: no te desvíes a otro enfoque. Estructura: Introducción, Desarrollo por H2, FAQs, Conclusión.";
 
 export async function generateArticle(brief: ArticleBrief): Promise<{
   article: Article;
@@ -23,16 +22,17 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
       meta_description: brief.metaDescription,
       slug: brief.slug,
       disclaimer: brief.disclaimer,
-      mercado: "Perú",
-      marca: "lernymart",
+      mercado: "Perú / Latam",
+      marca: "Lernymart",
     },
     instrucciones: [
       "Redacta un artículo de 1200 a 1800 palabras en markdown limpio.",
+      "El contenido DEBE desarrollar el tema del brief de punta a punta.",
       "Usa el titulo_h1 como H1 (#).",
       "Desarrolla cada H2 de estructura_h2.",
       "Incluye FAQs finales (mínimo 3, máximo 6).",
-      "Incluye un CTA final suave orientado a laboratorios clínicos / lernymart.",
-      "No inventes datos médicos ni hagas diagnósticos.",
+      "CTA final suave orientado a aprender, crear o publicar cursos en Lernymart.",
+      "No inventes estadísticas falsas ni promesas engañosas.",
     ],
     formato_respuesta: {
       articulo_md: "string — markdown completo del artículo",

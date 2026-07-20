@@ -7,8 +7,9 @@ import type { PipelineSummary } from "@/types";
 type Status = "idle" | "loading" | "success" | "error";
 
 export default function AdminPage() {
+  const [tema, setTema] = useState("");
   const [keywordBase, setKeywordBase] = useState("");
-  const [categoria, setCategoria] = useState("laboratorios clínicos");
+  const [categoria, setCategoria] = useState("cursos");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<PipelineSummary | null>(null);
@@ -24,8 +25,9 @@ export default function AdminPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          keywordBase: keywordBase.trim(),
-          categoria: categoria.trim() || "general",
+          tema: tema.trim(),
+          keywordBase: keywordBase.trim() || undefined,
+          categoria: categoria.trim() || "cursos",
         }),
       });
 
@@ -59,8 +61,9 @@ export default function AdminPage() {
           Generar artículo SEO
         </h1>
         <p className="mt-3 text-ink-600 leading-relaxed">
-          Ejecuta el pipeline completo: expansión de keywords, Google Trends,
-          aprobación editorial, brief y publicación en el blog de prueba.
+          Escribe el tema del artículo (el enfoque del contenido). La palabra
+          clave SEO es opcional y solo ayuda al posicionamiento; no reemplaza
+          el tema.
         </p>
       </div>
 
@@ -70,18 +73,38 @@ export default function AdminPage() {
       >
         <div>
           <label
+            htmlFor="tema"
+            className="mb-1.5 block text-sm font-semibold text-ink-800"
+          >
+            Tema del artículo <span className="text-red-600">*</span>
+          </label>
+          <textarea
+            id="tema"
+            name="tema"
+            required
+            rows={3}
+            value={tema}
+            onChange={(e) => setTema(e.target.value)}
+            placeholder="ej. Cómo crear un ebook de forma sencilla y subir tu contenido en Lernymart"
+            disabled={isLoading}
+            className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 placeholder:text-ink-400 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
+          />
+        </div>
+
+        <div>
+          <label
             htmlFor="keywordBase"
             className="mb-1.5 block text-sm font-semibold text-ink-800"
           >
-            Palabra clave <span className="text-red-600">*</span>
+            Palabra clave SEO{" "}
+            <span className="font-normal text-ink-500">(opcional)</span>
           </label>
           <input
             id="keywordBase"
             name="keywordBase"
-            required
             value={keywordBase}
             onChange={(e) => setKeywordBase(e.target.value)}
-            placeholder="ej. precio hemograma completo Lima"
+            placeholder="ej. creación de ebooks"
             disabled={isLoading}
             className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 placeholder:text-ink-400 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
           />
@@ -99,7 +122,7 @@ export default function AdminPage() {
             name="categoria"
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
-            placeholder="laboratorios clínicos"
+            placeholder="cursos"
             disabled={isLoading}
             className="w-full rounded-md border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none ring-brand-400/40 placeholder:text-ink-400 focus:border-ink-950 focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
           />
@@ -107,13 +130,13 @@ export default function AdminPage() {
 
         <button
           type="submit"
-          disabled={isLoading || !keywordBase.trim()}
+          disabled={isLoading || !tema.trim()}
           className="inline-flex w-full items-center justify-center rounded-md bg-ink-950 px-4 py-3 text-sm font-semibold text-brand-400 transition hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? (
             <span className="inline-flex items-center gap-2">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-400/30 border-t-brand-400" />
-              Generando… (puede tardar 1–3 min)
+              Generando… (puede tardar 1–2 min)
             </span>
           ) : (
             "Generar artículo"
@@ -135,16 +158,13 @@ export default function AdminPage() {
         <div className="mt-6 rounded-lg border border-ink-950 bg-brand-100 px-4 py-4 text-sm text-ink-900">
           <p className="font-semibold text-ink-950">Pipeline completado</p>
           <ul className="mt-3 space-y-1 text-ink-800">
-            <li>Keywords relacionadas: {result.relatedKeywordsCount}</li>
-            <li>Tendencias analizadas: {result.trendsAnalyzed}</li>
-            <li>Aprobadas: {result.approvedCount}</li>
             <li>Briefs: {result.briefsGenerated}</li>
             <li>Publicados: {result.articlesPublished}</li>
           </ul>
 
           {result.publishedUrls.length > 0 ? (
             <div className="mt-4 space-y-2">
-              <p className="font-semibold text-ink-950">Artículos publicados:</p>
+              <p className="font-semibold text-ink-950">Artículo publicado:</p>
               {result.publishedUrls.map((url) => (
                 <Link
                   key={url}
@@ -157,8 +177,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <p className="mt-3 text-ink-700">
-              No se publicó ningún artículo (ninguna keyword pasó la aprobación o
-              hubo errores en la generación).
+              No se publicó el artículo. Revisa las advertencias abajo.
             </p>
           )}
 
