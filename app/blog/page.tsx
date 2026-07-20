@@ -31,21 +31,27 @@ function mapArticlePreview(row: Record<string, unknown>): Pick<
 }
 
 export default async function BlogIndexPage() {
-  // Server Component: consulta directa a Supabase (sin fetch a /api/articles)
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("articles")
-    .select("id, slug, titulo_h1, meta_description, fecha_publicacion, estado")
-    .eq("estado", "publicado")
-    .order("fecha_publicacion", { ascending: false, nullsFirst: false });
+  let articles: ReturnType<typeof mapArticlePreview>[] = [];
+  let loadError: string | null = null;
 
-  if (error) {
-    throw new Error(`No se pudieron cargar los artículos: ${error.message}`);
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from("articles")
+      .select("id, slug, titulo_h1, meta_description, fecha_publicacion, estado")
+      .eq("estado", "publicado")
+      .order("fecha_publicacion", { ascending: false, nullsFirst: false });
+
+    if (error) {
+      loadError = error.message;
+    } else {
+      articles = ((data ?? []) as Record<string, unknown>[]).map(
+        mapArticlePreview
+      );
+    }
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : String(err);
   }
-
-  const articles = ((data ?? []) as Record<string, unknown>[]).map(
-    mapArticlePreview
-  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
@@ -61,7 +67,19 @@ export default async function BlogIndexPage() {
         </p>
       </header>
 
-      {articles.length === 0 ? (
+      {loadError ? (
+        <div className="rounded-lg border border-ink-950 bg-brand-100 px-6 py-8 text-sm text-ink-900">
+          <p className="font-semibold text-ink-950">No se pudo conectar a Supabase</p>
+          <p className="mt-2 text-ink-700">{loadError}</p>
+          <p className="mt-3 text-ink-600">
+            Revisa que existan{" "}
+            <code className="text-ink-950">NEXT_PUBLIC_SUPABASE_URL</code> y{" "}
+            <code className="text-ink-950">SUPABASE_SERVICE_ROLE_KEY</code> en{" "}
+            <code className="text-ink-950">.env.local</code> (local) o en Vercel
+            → Environment Variables, y reinicia el servidor.
+          </p>
+        </div>
+      ) : articles.length === 0 ? (
         <div className="rounded-lg border border-dashed border-ink-300 bg-white/50 px-6 py-10 text-center">
           <p className="text-ink-600">Aún no hay artículos publicados.</p>
           <Link

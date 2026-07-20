@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { markdownToHtml } from "@/lib/markdown";
 import { articlesStore } from "@/lib/storage";
+import type { Article } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -26,25 +27,34 @@ function formatDate(iso: string): string {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const article = await articlesStore.getBySlug(params.slug);
-  if (!article || article.estado !== "publicado") {
-    return { title: "Artículo no encontrado" };
-  }
+  try {
+    const article = await articlesStore.getBySlug(params.slug);
+    if (!article || article.estado !== "publicado") {
+      return { title: "Artículo no encontrado" };
+    }
 
-  return {
-    title: article.metaTitle || article.tituloH1,
-    description: article.metaDescription,
-    openGraph: {
+    return {
       title: article.metaTitle || article.tituloH1,
       description: article.metaDescription,
-      type: "article",
-      publishedTime: article.fechaPublicacion,
-    },
-  };
+      openGraph: {
+        title: article.metaTitle || article.tituloH1,
+        description: article.metaDescription,
+        type: "article",
+        publishedTime: article.fechaPublicacion,
+      },
+    };
+  } catch {
+    return { title: "Artículo no encontrado" };
+  }
 }
 
 export default async function BlogArticlePage({ params }: PageProps) {
-  const article = await articlesStore.getBySlug(params.slug);
+  let article: Article | null = null;
+  try {
+    article = await articlesStore.getBySlug(params.slug);
+  } catch {
+    notFound();
+  }
   if (!article || article.estado !== "publicado") {
     notFound();
   }
