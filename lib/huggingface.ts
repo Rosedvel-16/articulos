@@ -1,8 +1,9 @@
 import { InferenceClient } from "@huggingface/inference";
 
-const DEFAULT_MODEL = "black-forest-labs/FLUX.1-schnell";
-const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 5000;
+/** Modelo razonable en tier gratuito (Serverless / hf-inference). */
+const DEFAULT_MODEL = "stabilityai/stable-diffusion-xl-base-1.0";
+const MAX_ATTEMPTS = 4;
+const RETRY_DELAY_MS = 6000;
 
 export class HuggingFaceError extends Error {
   constructor(
@@ -32,7 +33,10 @@ function getModel(): string {
 }
 
 function getProvider(): "auto" | "fal-ai" | "replicate" | "hf-inference" {
-  const raw = (process.env.HUGGINGFACE_PROVIDER ?? "auto").trim().toLowerCase();
+  // Por defecto hf-inference = ruta serverless gratis (sin tarjeta).
+  const raw = (process.env.HUGGINGFACE_PROVIDER ?? "hf-inference")
+    .trim()
+    .toLowerCase();
   if (
     raw === "fal-ai" ||
     raw === "replicate" ||
@@ -41,7 +45,7 @@ function getProvider(): "auto" | "fal-ai" | "replicate" | "hf-inference" {
   ) {
     return raw;
   }
-  return "auto";
+  return "hf-inference";
 }
 
 function isRetryableMessage(message: string): boolean {
@@ -53,7 +57,8 @@ function isRetryableMessage(message: string): boolean {
     m.includes("temporarily") ||
     m.includes("overloaded") ||
     m.includes("rate limit") ||
-    m.includes("429")
+    m.includes("429") ||
+    m.includes("estimated_time")
   );
 }
 
@@ -72,15 +77,18 @@ async function blobToBuffer(value: unknown): Promise<Buffer> {
   );
 }
 
+const NEGATIVE_PROMPT =
+  "text, letters, words, typography, caption, title, subtitle, watermark, logo, signature, writing, alphabet, numbers, signage, UI text, readable text, poster text, book cover text";
+
 /**
- * Genera una imagen con Hugging Face Inference Providers (API actual).
- * Default: FLUX.1-schnell con provider=auto.
+ * Genera imagen con Hugging Face (tier gratuito vía hf-inference / Serverless).
+ * Default: Stable Diffusion XL (más compatible sin billing que FLUX providers).
  */
 export async function generateArticleImage(prompt: string): Promise<Buffer> {
   const apiKey = getApiKey();
   if (!apiKey) {
     throw new HuggingFaceError(
-      "Falta HUGGINGFACE_API_KEY en Vercel/.env.local (token con permiso Inference Providers)."
+      "Falta HUGGINGFACE_API_KEY en Vercel/.env.local."
     );
   }
 
@@ -95,7 +103,7 @@ export async function generateArticleImage(prompt: string): Promise<Buffer> {
       model,
       provider,
       attempt,
-      promptPreview: prompt.slice(0, 160),
+      promptPreview: prompt.slice(0, 200),
       keyPresent: true,
     });
 
@@ -105,7 +113,9 @@ export async function generateArticleImage(prompt: string): Promise<Buffer> {
         provider,
         inputs: prompt,
         parameters: {
-          num_inference_steps: 4,
+          negative_prompt: NEGATIVE_PROMPT,
+          guidance_scale: 7,
+          num_inference_steps: 20,
         },
       });
 
@@ -123,7 +133,6 @@ export async function generateArticleImage(prompt: string): Promise<Buffer> {
       console.error("[huggingface] textToImage failed", {
         attempt,
         message,
-        err,
       });
 
       lastError = new HuggingFaceError(
@@ -132,8 +141,32 @@ export async function generateArticleImage(prompt: string): Promise<Buffer> {
         message
       );
 
+      // Fallback HTTP serverless si el SDK falla (cold start / provider)
+      if (attempt === 2) {
+        try {
+          const viaHttp = await generateViaClassicInferenceApi(
+            apiKey,
+            model,
+            prompt
+          );
+          console.info("[huggingface] classic API ok", {
+            bytes: viaHttp.length,
+          });
+          return viaHttp;
+        } catch (httpErr) {
+          const httpMsg =
+            httpErr instanceof Error ? httpErr.message : String(httpErr);
+          console.error("[huggingface] classic API failed", httpMsg);
+          lastError = new HuggingFaceError(httpMsg);
+        }
+      }
+
       if (attempt < MAX_ATTEMPTS && isRetryableMessage(message)) {
         await sleep(RETRY_DELAY_MS * attempt);
+        continue;
+      }
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(RETRY_DELAY_MS);
         continue;
       }
       break;
@@ -143,5 +176,65 @@ export async function generateArticleImage(prompt: string): Promise<Buffer> {
   throw (
     lastError ??
     new HuggingFaceError("No se pudo generar la imagen con Hugging Face.")
+  );
+}
+
+/** Endpoint serverless clásico (suele funcionar en cuenta free sin tarjeta). */
+async function generateViaClassicInferenceApi(
+  apiKey: string,
+  model: string,
+  prompt: string
+): Promise<Buffer> {
+  const url = `https://api-inference.huggingface.co/models/${model}`;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "image/png",
+      },
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: {
+          negative_prompt: NEGATIVE_PROMPT,
+          guidance_scale: 7,
+          num_inference_steps: 20,
+        },
+      }),
+    });
+
+    if (response.status === 503) {
+      const body = await response.text();
+      console.warn("[huggingface] classic 503 loading", body.slice(0, 300));
+      await sleep(RETRY_DELAY_MS * attempt);
+      continue;
+    }
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new HuggingFaceError(
+        `API Inference respondió ${response.status}: ${body.slice(0, 400)}`,
+        response.status,
+        body
+      );
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (contentType.includes("application/json")) {
+      throw new HuggingFaceError(
+        `API Inference no devolvió imagen: ${buffer.toString("utf8").slice(0, 400)}`
+      );
+    }
+    if (buffer.length < 100) {
+      throw new HuggingFaceError("Imagen vacía desde API Inference.");
+    }
+    return buffer;
+  }
+
+  throw new HuggingFaceError(
+    "Modelo aún cargando en Hugging Face (503). Reintenta en unos segundos."
   );
 }

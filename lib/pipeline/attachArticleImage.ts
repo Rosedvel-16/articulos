@@ -5,43 +5,113 @@ import type { Article } from "@/types";
 
 const BUCKET = "article-images";
 
-const CATEGORY_STYLE: Record<string, string> = {
-  cursos: "online courses and learning, laptop and notebooks",
-  ebooks: "digital ebooks and reading, clean education publishing",
-  "educacion-online": "online education, remote learning, modern classroom",
-  emprendimiento: "entrepreneurship, startup growth, business ideas",
-  "marketing-digital": "digital marketing, analytics charts, social media icons abstract",
-  negocios: "business strategy, professional workspace, growth",
-  tecnologia: "technology, abstract digital networks, modern devices",
-  "desarrollo-personal": "personal growth, focus and motivation, abstract path",
-  diseno: "creative design studio, shapes and composition",
-  general: "education marketplace, learning and knowledge sharing",
+/** Estilos visuales en INGLÉS por categoría (sin pedir texto en la imagen). */
+const CATEGORY_VISUAL: Record<string, string> = {
+  cursos:
+    "online learning scene, open laptop, notebooks, soft desk light, inspired students silhouette without faces",
+  ebooks:
+    "floating digital book pages, soft glow, cozy reading desk, warm lamp light, modern publishing mood",
+  "educacion-online":
+    "remote education, video call abstract shapes, headset and laptop, bright modern study space",
+  emprendimiento:
+    "startup energy, rising abstract arrows, creative desk with sticky notes as blank shapes only, sunrise window",
+  "marketing-digital":
+    "digital marketing mood, abstract social icons as simple shapes, analytics curves, neon accents on dark desk",
+  negocios:
+    "professional business workspace, glass buildings soft bokeh, growth charts as abstract lines, confident atmosphere",
+  tecnologia:
+    "futuristic technology, glowing circuit patterns, sleek devices, deep blue and gold light",
+  "desarrollo-personal":
+    "personal growth metaphor, ascending path on mountains, calm sunrise, hopeful cinematic light",
+  diseno:
+    "creative design studio, bold geometric shapes, color swatches as abstract blocks, artistic composition",
+  general:
+    "education marketplace atmosphere, knowledge sharing, modern learning hub, warm inviting light",
 };
 
-function buildImagePrompt(input: {
+/** Glosario corto ES → EN para no mandar español al modelo (evita que intente “escribir” el título). */
+const ES_EN: Record<string, string> = {
+  ganar: "earning",
+  dinero: "money",
+  extra: "extra",
+  ebook: "ebook",
+  ebooks: "ebooks",
+  curso: "course",
+  cursos: "courses",
+  online: "online",
+  vender: "selling",
+  venta: "sales",
+  marketing: "marketing",
+  digital: "digital",
+  plataforma: "platform",
+  plataformas: "platforms",
+  mejores: "best",
+  generar: "generating",
+  ingresos: "income",
+  crear: "creating",
+  como: "how to",
+  hacer: "making",
+  aprender: "learning",
+  educacion: "education",
+  negocio: "business",
+  negocios: "business",
+  emprendimiento: "entrepreneurship",
+  tecnologia: "technology",
+  diseno: "design",
+  dormiendo: "while sleeping",
+  pasivo: "passive",
+};
+
+function stripDiacritics(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Convierte el tema a un topic corto en inglés (sin frases largas ni títulos literales). */
+export function topicToEnglish(tema: string, keyword?: string): string {
+  const source = `${tema} ${keyword ?? ""}`.trim();
+  const words = stripDiacritics(source.toLowerCase())
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const translated = words
+    .map((w) => ES_EN[w] ?? ( /^[a-z]+$/.test(w) && w.length > 2 ? w : ""))
+    .filter(Boolean);
+
+  const unique = Array.from(new Set(translated)).slice(0, 8);
+  return unique.join(" ") || "online education and digital learning";
+}
+
+/**
+ * Prompt SOLO en inglés, llamativo, acorde al blog, y con prohibición fuerte de texto.
+ * No incluye el título en español (los modelos de difusión lo “escriben” mal).
+ */
+export function buildImagePrompt(input: {
   tema: string;
   tituloH1: string;
   categoria: string;
+  keywordPrincipal?: string;
 }): string {
   const categoria = input.categoria.trim().toLowerCase() || "general";
-  const style =
-    CATEGORY_STYLE[categoria] ??
-    CATEGORY_STYLE.general ??
-    "education and digital business";
+  const visual =
+    CATEGORY_VISUAL[categoria] ??
+    CATEGORY_VISUAL.general ??
+    "modern education and digital business mood";
 
-  const tema = input.tema.trim() || input.tituloH1.trim();
-  const titulo = input.tituloH1.trim();
+  const topic = topicToEnglish(
+    input.tema,
+    input.keywordPrincipal || input.tituloH1
+  );
 
   return [
-    `Professional editorial illustration about "${tema}"`,
-    titulo && titulo !== tema ? `(article theme: ${titulo})` : "",
-    `visual style: ${style}`,
-    "flat design, blog header image, wide banner composition",
-    "no text, no letters, no words, no watermark, no logo typography",
-    "corporate clean style, warm color palette, high quality",
-  ]
-    .filter(Boolean)
-    .join(", ");
+    "Eye-catching wide blog header illustration, cinematic banner composition, 16:9",
+    `main subject: ${topic}`,
+    `scene details: ${visual}`,
+    "vibrant but professional color grading, high contrast, clean modern editorial style",
+    "bold focal point, depth of field, polished marketing visual",
+    "absolutely no text, no letters, no words, no typography, no captions, no watermarks, no logos, no UI with readable text, no book covers with titles, no signs with writing",
+    "empty clean areas without lettering, image-only storytelling",
+  ].join(". ");
 }
 
 async function ensurePublicBucket(): Promise<void> {
@@ -89,7 +159,6 @@ export async function uploadArticleImage(
 
 /**
  * Genera imagen HF, la sube a Storage y actualiza articles.imagen_url.
- * No cambia el estado del artículo (eso lo hace runPipeline).
  */
 export async function attachArticleImage(
   article: Article,
@@ -99,6 +168,12 @@ export async function attachArticleImage(
     tema: article.tema,
     tituloH1: article.tituloH1,
     categoria,
+    keywordPrincipal: article.keywordPrincipal,
+  });
+
+  console.info("[attachArticleImage] prompt", {
+    slug: article.slug,
+    prompt,
   });
 
   const buffer = await generateArticleImage(prompt);
