@@ -5,7 +5,7 @@ import { articlesStore } from "@/lib/storage";
 import type { Article, ArticleBrief, FaqItem } from "@/types";
 
 const SYSTEM_BODY =
-  "Eres redactor SEO experto en educación online, cursos, ebooks y Lernymart. Escribes claro, útil, sin relleno. Markdown con H2/H3, una tabla y un blockquote (>). Negritas en frases clave. El TEMA del brief es el eje. NO incluyas FAQs ni conclusión/CTA ni H1 en el markdown. Responde SOLO en formato JSON válido.";
+  "Eres redactor SEO experto en educación online, cursos, ebooks y Lernymart. Escribes claro, útil, sin relleno. Markdown con H2/H3, una tabla y un blockquote (>). Negritas en frases clave. El TEMA del brief es el eje. NO incluyas FAQs ni conclusión/CTA ni H1 en el markdown. El artículo debe mencionar el concepto de 'infoproducto(s)' de forma natural en la introducción y en al menos 2 secciones del desarrollo, presentando el formato específico de la keyword_principal (curso, ebook, podcast, etc.) como un ejemplo o tipo de infoproducto. Mantén siempre la keyword_principal con densidad natural para SEO. Prioriza que el artículo suene coherente y fluido — no repitas 'infoproducto' de forma forzada ni antinatural. Responde SOLO en formato JSON válido.";
 
 const SYSTEM_META =
   "Eres editor SEO. Generas FAQs cortas y un CTA suave para Lernymart. Responde SOLO en formato JSON válido.";
