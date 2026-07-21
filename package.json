@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@huggingface/inference": "^4.13.23",
     "@supabase/supabase-js": "^2.110.7",
     "lucide-react": "^1.25.0",
     "marked": "^15.0.0",
