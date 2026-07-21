@@ -155,6 +155,9 @@ export async function runPipeline(
     approvedCount: decisions.length,
     toPublish: toPublish.map((d) => d.keywordRelacionada),
     openRouterKeyPresent: Boolean(process.env.OPENROUTER_API_KEY),
+    pollinationsKeyPresent: Boolean(
+      process.env.POLLINATIONS_API_KEY || process.env.POLLINATIONS_KEY
+    ),
   });
 
   for (const decision of toPublish) {

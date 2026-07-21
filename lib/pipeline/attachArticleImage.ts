@@ -104,13 +104,11 @@ export function buildImagePrompt(input: {
   );
 
   return [
-    "Eye-catching wide blog header illustration, cinematic banner composition, 16:9",
-    `main subject: ${topic}`,
-    `scene details: ${visual}`,
-    "vibrant but professional color grading, high contrast, clean modern editorial style",
-    "bold focal point, depth of field, polished marketing visual",
-    "absolutely no text, no letters, no words, no typography, no captions, no watermarks, no logos, no UI with readable text, no book covers with titles, no signs with writing",
-    "empty clean areas without lettering, image-only storytelling",
+    "Eye-catching wide blog header, cinematic 16:9 banner",
+    `subject: ${topic}`,
+    `scene: ${visual}`,
+    "vibrant professional editorial style, bold focal point",
+    "absolutely no text, no letters, no words, no typography, no watermarks, no logos",
   ].join(". ");
 }
 
@@ -140,13 +138,18 @@ export async function uploadArticleImage(
 ): Promise<string> {
   await ensurePublicBucket();
   const supabase = getSupabase();
-  const path = `${slug}.png`;
+
+  const isJpeg = image[0] === 0xff && image[1] === 0xd8;
+  const ext = isJpeg ? "jpg" : "png";
+  const contentType = isJpeg ? "image/jpeg" : "image/png";
+  const path = `${slug}.${ext}`;
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, image, {
-    contentType: "image/png",
+    contentType,
     upsert: true,
   });
   if (error) {
+    console.error("[attachArticleImage] storage upload failed", error);
     throw new Error(`No se pudo subir la imagen a Storage: ${error.message}`);
   }
 
@@ -154,6 +157,7 @@ export async function uploadArticleImage(
   if (!data?.publicUrl) {
     throw new Error("No se pudo obtener la URL pública de la imagen.");
   }
+  console.info("[attachArticleImage] uploaded", { path, url: data.publicUrl });
   return data.publicUrl;
 }
 
