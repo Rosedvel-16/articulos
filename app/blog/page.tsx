@@ -5,7 +5,7 @@ import type { Article } from "@/types";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const PAGE_SIZE = 8; // 4 columnas × 2 filas
+const PAGE_SIZE = 9; // 3 columnas × 3 filas
 
 function formatDate(iso: string): string {
   if (!iso) return "";
@@ -91,7 +91,7 @@ export default async function BlogIndexPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <>
-          <ul className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-10">
             {pageArticles.map((article) => (
               <li key={article.id || article.slug} className="min-w-0">
                 <article className="group flex h-full flex-col border-t-2 border-brand-400 pt-4">
@@ -131,7 +131,7 @@ export default async function BlogIndexPage({ searchParams }: PageProps) {
                     )}
                   </time>
 
-                  <h2 className="mt-1 font-display text-lg font-semibold leading-snug text-ink-950 group-hover:text-ink-800">
+                  <h2 className="mt-1 font-display text-xl font-semibold leading-snug text-ink-950 group-hover:text-ink-800">
                     <Link href={`/blog/${article.slug}`} className="line-clamp-3">
                       {article.tituloH1}
                     </Link>
