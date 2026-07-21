@@ -150,26 +150,36 @@ export async function callOpenRouter<T = unknown>(
     .trim();
 
   if (finishReason === "length") {
-    console.error("[openrouter] truncated by max_tokens", {
+    console.error("[openrouter] truncated by max_tokens BEFORE parse", {
       contentLength: cleaned.length,
       maxTokens,
-      preview: cleaned.slice(0, 500),
+      head: cleaned.slice(0, 200),
+      tail: cleaned.slice(-200),
     });
+    throw new OpenRouterError(
+      `La respuesta del modelo fue truncada por límite de tokens (finish_reason=length, len=${cleaned.length}, max_tokens=${maxTokens}). Aumentar max_tokens.`,
+      response.status,
+      cleaned.slice(0, 1000)
+    );
   }
 
   try {
     return JSON.parse(cleaned) as T;
-  } catch {
+  } catch (parseErr) {
+    const parseMsg =
+      parseErr instanceof Error ? parseErr.message : String(parseErr);
+    const head = cleaned.slice(0, 200);
+    const tail = cleaned.slice(-200);
     console.error("[openrouter] model content not JSON", {
       status: response.status,
       finishReason,
-      contentPreview: cleaned.slice(0, 2000),
       contentLength: cleaned.length,
+      head,
+      tail,
+      parseMsg,
     });
     throw new OpenRouterError(
-      finishReason === "length"
-        ? `OpenRouter truncó la respuesta (finish_reason=length, len=${cleaned.length}, max_tokens=${maxTokens}). El JSON del artículo quedó incompleto.`
-        : `El contenido del modelo no es JSON parseable (len=${cleaned.length}, finish_reason=${finishReason ?? "unknown"}).`,
+      `El contenido del modelo no es JSON parseable (len=${cleaned.length}, finish_reason=${finishReason ?? "unknown"}). head="${head}" tail="${tail}". parse=${parseMsg}`,
       response.status,
       cleaned.slice(0, 1000)
     );

@@ -26,7 +26,7 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
       marca: "Lernymart",
     },
     instrucciones: [
-      "Redacta el cuerpo del artículo (aprox. 1000 a 1500 palabras) en markdown limpio.",
+      "Redacta el cuerpo del artículo (aprox. 900 a 1300 palabras) en markdown limpio.",
       "El contenido DEBE desarrollar el tema del brief de punta a punta.",
       "NO pongas H1 en articulo_md (el título se muestra aparte en la web).",
       "Empieza con una introducción breve y luego desarrolla cada H2 de estructura_h2.",
@@ -51,7 +51,8 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
   let raw: ArticleRaw;
   try {
     raw = await callOpenRouter<ArticleRaw>(SYSTEM_PROMPT, userPrompt, {
-      maxTokens: 8192,
+      // gpt-4o-mini soporta hasta 16384 de salida; 16000 deja margen seguro.
+      maxTokens: 16000,
     });
   } catch (err) {
     console.error("[generateArticle] OpenRouter failed", {
