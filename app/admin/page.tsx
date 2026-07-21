@@ -340,6 +340,24 @@ export default function AdminPage() {
                   </div>
                 )}
 
+                {published &&
+                  result.errors.some((e) =>
+                    e.toLowerCase().includes("imagen")
+                  ) && (
+                    <div className="mt-4 border border-brand-400 bg-brand-50 px-3 py-3 text-sm text-ink-800">
+                      <p className="font-semibold text-ink-950">
+                        Aviso sobre la imagen de cabecera
+                      </p>
+                      <ul className="mt-2 list-disc space-y-1 pl-4 text-ink-700">
+                        {result.errors
+                          .filter((e) => e.toLowerCase().includes("imagen"))
+                          .map((err) => (
+                            <li key={err}>{err}</li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
+
                 <div
                   className={`mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 ${
                     published ? "text-white/90" : "text-ink-800"

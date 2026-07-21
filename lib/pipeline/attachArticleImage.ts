@@ -5,31 +5,34 @@ import type { Article } from "@/types";
 
 const BUCKET = "article-images";
 
-/** Estilos visuales en INGLÉS por categoría (sin pedir texto en la imagen). */
 const CATEGORY_VISUAL: Record<string, string> = {
   cursos:
-    "online learning scene, open laptop, notebooks, soft desk light, inspired students silhouette without faces",
-  ebooks:
-    "floating digital book pages, soft glow, cozy reading desk, warm lamp light, modern publishing mood",
-  "educacion-online":
-    "remote education, video call abstract shapes, headset and laptop, bright modern study space",
-  emprendimiento:
-    "startup energy, rising abstract arrows, creative desk with sticky notes as blank shapes only, sunrise window",
+    "online learning scene, open laptop, notebooks, soft desk light",
+  ebooks: "floating digital book pages, soft glow, cozy reading desk",
+  "educacion-online": "remote education, headset and laptop, bright study space",
+  emprendimiento: "startup energy, rising abstract arrows, sunrise window",
   "marketing-digital":
-    "digital marketing mood, abstract social icons as simple shapes, analytics curves, neon accents on dark desk",
-  negocios:
-    "professional business workspace, glass buildings soft bokeh, growth charts as abstract lines, confident atmosphere",
-  tecnologia:
-    "futuristic technology, glowing circuit patterns, sleek devices, deep blue and gold light",
-  "desarrollo-personal":
-    "personal growth metaphor, ascending path on mountains, calm sunrise, hopeful cinematic light",
-  diseno:
-    "creative design studio, bold geometric shapes, color swatches as abstract blocks, artistic composition",
-  general:
-    "education marketplace atmosphere, knowledge sharing, modern learning hub, warm inviting light",
+    "digital marketing mood, abstract analytics curves, neon accents",
+  negocios: "professional business workspace, soft bokeh city lights",
+  tecnologia: "futuristic technology, glowing circuit patterns, sleek devices",
+  "desarrollo-personal": "personal growth path on mountains, calm sunrise",
+  diseno: "creative design studio, bold geometric shapes",
+  general: "education marketplace, modern learning hub, warm light",
 };
 
-/** Glosario corto ES → EN para no mandar español al modelo (evita que intente “escribir” el título). */
+const CATEGORY_STOCK_TAGS: Record<string, string> = {
+  cursos: "laptop,study,education",
+  ebooks: "book,reading,desk",
+  "educacion-online": "computer,student,online",
+  emprendimiento: "startup,office,business",
+  "marketing-digital": "marketing,analytics,laptop",
+  negocios: "business,meeting,office",
+  tecnologia: "technology,code,computer",
+  "desarrollo-personal": "mountain,sunrise,path",
+  diseno: "design,creative,colors",
+  general: "education,learning,workspace",
+};
+
 const ES_EN: Record<string, string> = {
   ganar: "earning",
   dinero: "money",
@@ -60,13 +63,16 @@ const ES_EN: Record<string, string> = {
   diseno: "design",
   dormiendo: "while sleeping",
   pasivo: "passive",
+  estudiantes: "students",
+  captar: "attracting",
+  estrategias: "strategies",
+  atraer: "attract",
 };
 
 function stripDiacritics(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-/** Convierte el tema a un topic corto en inglés (sin frases largas ni títulos literales). */
 export function topicToEnglish(tema: string, keyword?: string): string {
   const source = `${tema} ${keyword ?? ""}`.trim();
   const words = stripDiacritics(source.toLowerCase())
@@ -75,17 +81,13 @@ export function topicToEnglish(tema: string, keyword?: string): string {
     .filter(Boolean);
 
   const translated = words
-    .map((w) => ES_EN[w] ?? ( /^[a-z]+$/.test(w) && w.length > 2 ? w : ""))
+    .map((w) => ES_EN[w] ?? (/^[a-z]+$/.test(w) && w.length > 2 ? w : ""))
     .filter(Boolean);
 
   const unique = Array.from(new Set(translated)).slice(0, 8);
   return unique.join(" ") || "online education and digital learning";
 }
 
-/**
- * Prompt SOLO en inglés, llamativo, acorde al blog, y con prohibición fuerte de texto.
- * No incluye el título en español (los modelos de difusión lo “escriben” mal).
- */
 export function buildImagePrompt(input: {
   tema: string;
   tituloH1: string;
@@ -96,7 +98,7 @@ export function buildImagePrompt(input: {
   const visual =
     CATEGORY_VISUAL[categoria] ??
     CATEGORY_VISUAL.general ??
-    "modern education and digital business mood";
+    "modern education mood";
 
   const topic = topicToEnglish(
     input.tema,
@@ -117,7 +119,9 @@ async function ensurePublicBucket(): Promise<void> {
   const { data: buckets, error: listError } =
     await supabase.storage.listBuckets();
   if (listError) {
-    console.warn("[attachArticleImage] listBuckets", listError.message);
+    throw new Error(
+      `No se pudo listar buckets de Storage: ${listError.message}`
+    );
   }
   const exists = (buckets ?? []).some((b) => b.name === BUCKET);
   if (exists) return;
@@ -128,8 +132,51 @@ async function ensurePublicBucket(): Promise<void> {
     allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
   });
   if (error && !error.message.toLowerCase().includes("already exists")) {
-    console.warn("[attachArticleImage] createBucket", error.message);
+    throw new Error(
+      `No existe el bucket público "${BUCKET}" y no se pudo crear: ${error.message}. Créalo en Supabase → Storage (Public).`
+    );
   }
+}
+
+/** Foto de stock siempre disponible (sin API key). */
+async function fetchStockHeroImage(
+  slug: string,
+  categoria: string
+): Promise<Buffer> {
+  const tags =
+    CATEGORY_STOCK_TAGS[categoria.trim().toLowerCase()] ??
+    CATEGORY_STOCK_TAGS.general ??
+    "education,learning";
+  const seed = encodeURIComponent(slug.slice(0, 40) || "lernymart");
+
+  const candidates = [
+    `https://loremflickr.com/1280/720/${encodeURIComponent(tags)}/all?lock=${seed}`,
+    `https://picsum.photos/seed/${seed}/1280/720`,
+  ];
+
+  let lastMsg = "";
+  for (const url of candidates) {
+    try {
+      console.info("[attachArticleImage] stock fetch", { url });
+      const response = await fetch(url, {
+        redirect: "follow",
+        headers: { Accept: "image/*" },
+      });
+      if (!response.ok) {
+        lastMsg = `HTTP ${response.status}`;
+        continue;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length < 1000) {
+        lastMsg = "imagen demasiado pequeña";
+        continue;
+      }
+      return buffer;
+    } catch (err) {
+      lastMsg = err instanceof Error ? err.message : String(err);
+    }
+  }
+  throw new Error(`Fallback stock falló: ${lastMsg}`);
 }
 
 export async function uploadArticleImage(
@@ -161,13 +208,19 @@ export async function uploadArticleImage(
   return data.publicUrl;
 }
 
+export type AttachImageResult = {
+  imagenUrl: string;
+  source: "pollinations" | "stock";
+  warning?: string;
+};
+
 /**
- * Genera imagen con Pollinations, la sube a Storage y actualiza articles.imagen_url.
+ * Intenta Pollinations; si falla, usa foto stock y SIEMPRE deja imagen_url.
  */
 export async function attachArticleImage(
   article: Article,
   categoria: string
-): Promise<string> {
+): Promise<AttachImageResult> {
   const prompt = buildImagePrompt({
     tema: article.tema,
     tituloH1: article.tituloH1,
@@ -175,20 +228,40 @@ export async function attachArticleImage(
     keywordPrincipal: article.keywordPrincipal,
   });
 
-  console.info("[attachArticleImage] prompt", {
+  console.info("[attachArticleImage] start", {
     slug: article.slug,
-    prompt,
+    id: article.id,
+    categoria,
+    promptChars: prompt.length,
+    pollinationsKeyPresent: Boolean(
+      process.env.POLLINATIONS_API_KEY || process.env.POLLINATIONS_KEY
+    ),
   });
 
-  const buffer = await generateArticleImage(prompt);
+  let buffer: Buffer;
+  let source: AttachImageResult["source"] = "pollinations";
+  let warning: string | undefined;
+
+  try {
+    buffer = await generateArticleImage(prompt);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn("[attachArticleImage] Pollinations falló, uso stock", msg);
+    warning = `Pollinations falló (${msg}). Se usó imagen stock de respaldo.`;
+    buffer = await fetchStockHeroImage(article.slug, categoria);
+    source = "stock";
+  }
+
   const publicUrl = await uploadArticleImage(article.slug, buffer);
 
   const updated = await articlesStore.update(article.id, {
     imagenUrl: publicUrl,
   });
   if (!updated) {
-    throw new Error("No se pudo guardar imagen_url en articles.");
+    throw new Error(
+      `No se pudo guardar imagen_url en articles (id=${article.id}). ¿Existe la columna imagen_url?`
+    );
   }
 
-  return publicUrl;
+  return { imagenUrl: publicUrl, source, warning };
 }

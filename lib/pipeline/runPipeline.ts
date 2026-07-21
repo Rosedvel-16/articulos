@@ -195,8 +195,15 @@ export async function runPipeline(
         console.info("[runPipeline] attachArticleImage start", {
           slug: draft.slug,
         });
-        imagenUrl = await attachArticleImage(draft, categoria);
-        console.info("[runPipeline] attachArticleImage ok", { imagenUrl });
+        const attached = await attachArticleImage(draft, categoria);
+        imagenUrl = attached.imagenUrl;
+        console.info("[runPipeline] attachArticleImage ok", {
+          imagenUrl,
+          source: attached.source,
+        });
+        if (attached.warning) {
+          summary.errors.push(`Aviso imagen: ${attached.warning}`);
+        }
       } catch (imgErr) {
         const imgMsg =
           imgErr instanceof Error ? imgErr.message : String(imgErr);
