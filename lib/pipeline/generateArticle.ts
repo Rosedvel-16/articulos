@@ -5,7 +5,7 @@ import { articlesStore } from "@/lib/storage";
 import type { Article, ArticleBrief, ArticleRaw, FaqItem } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres redactor SEO experto en educación online, creación de cursos, ebooks y marketplaces como Lernymart. Contenido útil, humano, optimizado SEO, lenguaje claro, sin relleno, sin repetir keywords. Markdown con H2/H3, introducción atractiva, conclusión con CTA suave hacia Lernymart cuando encaje, listas cuando sea útil. El TEMA del brief es el eje del artículo: no te desvíes a otro enfoque. Estructura: Introducción, Desarrollo por H2, FAQs, Conclusión. Responde SOLO en formato JSON válido.";
+  "Eres redactor SEO experto en educación online, creación de cursos, ebooks y marketplaces como Lernymart. Contenido útil, humano, optimizado SEO, lenguaje claro, sin relleno, sin repetir keywords. Markdown con H2/H3, introducción atractiva, listas cuando sea útil, al menos una tabla markdown y al menos un blockquote (>). Usa negritas en frases clave del cuerpo (no solo en headings). El TEMA del brief es el eje del artículo: no te desvíes a otro enfoque. El markdown (articulo_md) cubre SOLO introducción y desarrollo por H2: NO incluyas sección de FAQs ni conclusión/CTA en el markdown (esas partes van en campos JSON aparte). Responde SOLO en formato JSON válido.";
 
 export async function generateArticle(brief: ArticleBrief): Promise<{
   article: Article;
@@ -26,19 +26,24 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
       marca: "Lernymart",
     },
     instrucciones: [
-      "Redacta un artículo de 1200 a 1800 palabras en markdown limpio.",
+      "Redacta el cuerpo del artículo (aprox. 1000 a 1500 palabras) en markdown limpio.",
       "El contenido DEBE desarrollar el tema del brief de punta a punta.",
-      "Usa el titulo_h1 como H1 (#).",
-      "Desarrolla cada H2 de estructura_h2.",
-      "Incluye FAQs finales (mínimo 3, máximo 6).",
-      "CTA final suave orientado a aprender, crear o publicar cursos en Lernymart.",
+      "NO pongas H1 en articulo_md (el título se muestra aparte en la web).",
+      "Empieza con una introducción breve y luego desarrolla cada H2 de estructura_h2.",
+      "Incluye al menos UNA tabla markdown (comparativa, pasos/tiempos o pros/contras) cuando encaje.",
+      "Incluye al menos UN blockquote con > (cita, dato clave o consejo destacado).",
+      "Usa **negritas** en frases clave del párrafo (además de headings).",
+      "PROHIBIDO en articulo_md: sección FAQs, Preguntas frecuentes, Conclusión, CTA final o cierre con llamado a la acción.",
+      "Las FAQs van SOLO en el campo JSON faq (mínimo 3, máximo 6).",
+      "El CTA va SOLO en el campo JSON cta (suave, orientado a aprender/crear/publicar cursos en Lernymart).",
       "No inventes estadísticas falsas ni promesas engañosas.",
       "Responde SOLO en formato JSON válido.",
     ],
     formato_respuesta: {
-      articulo_md: "string — markdown completo del artículo",
+      articulo_md:
+        "string — markdown del cuerpo (intro + H2/H3 + tabla + blockquote; SIN FAQs ni conclusión/CTA; SIN H1)",
       faq: [{ pregunta: "string", respuesta: "string" }],
-      cta: "string — llamado a la acción final",
+      cta: "string — llamado a la acción final (solo este campo, no en el markdown)",
       score_seo_estimado: "number 0-100",
     },
   });
