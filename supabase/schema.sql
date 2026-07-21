@@ -1,7 +1,7 @@
 -- Schema aditivo del pipeline SEO (Lernymart).
 -- Seguro de re-ejecutar. No borra datos.
 
--- Columna de imagen de cabecera (Hugging Face → Supabase Storage)
+-- Columna de imagen de cabecera (Pollinations → Supabase Storage)
 ALTER TABLE IF EXISTS articles
   ADD COLUMN IF NOT EXISTS imagen_url text;
 

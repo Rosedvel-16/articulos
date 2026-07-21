@@ -1,4 +1,4 @@
-import { generateArticleImage } from "@/lib/huggingface";
+import { generateArticleImage } from "@/lib/pollinations";
 import { getSupabase } from "@/lib/supabase";
 import { articlesStore } from "@/lib/storage";
 import type { Article } from "@/types";
@@ -158,7 +158,7 @@ export async function uploadArticleImage(
 }
 
 /**
- * Genera imagen HF, la sube a Storage y actualiza articles.imagen_url.
+ * Genera imagen con Pollinations, la sube a Storage y actualiza articles.imagen_url.
  */
 export async function attachArticleImage(
   article: Article,
