@@ -23,7 +23,6 @@ export default async function BlogIndexPage() {
   let loadError: string | null = null;
 
   try {
-    // Todos los publicados, sin filtro de categoría; orden fecha_publicacion DESC
     articles = await articlesStore.getPublished();
     articles.sort((a, b) => {
       const tb = Date.parse(b.fechaPublicacion || b.fechaGeneracion || "") || 0;
@@ -81,13 +80,40 @@ export default async function BlogIndexPage() {
           </Link>
         </div>
       ) : (
-        <ul className="space-y-8">
+        <ul className="space-y-10">
           {articles.map((article) => (
             <li key={article.id || article.slug}>
               <article className="group border-l-2 border-brand-400 pl-5 transition hover:border-ink-950">
+                <Link
+                  href={`/blog/${article.slug}`}
+                  className="block overflow-hidden border border-ink-200 bg-ink-950"
+                >
+                  {article.imagenUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={article.imagenUrl}
+                      alt=""
+                      className="aspect-[16/9] h-auto w-full object-cover transition duration-300 group-hover:opacity-95"
+                    />
+                  ) : (
+                    <div
+                      className="flex aspect-[16/9] w-full items-end bg-ink-950 p-4"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(135deg, #0a0a0a 40%, #262626 70%, #ffd600 140%)",
+                      }}
+                      aria-hidden
+                    >
+                      <span className="font-display text-sm font-semibold text-brand-400">
+                        lernymart
+                      </span>
+                    </div>
+                  )}
+                </Link>
+
                 <time
                   dateTime={article.fechaPublicacion}
-                  className="text-xs font-medium uppercase tracking-wider text-ink-400"
+                  className="mt-4 block text-xs font-medium uppercase tracking-wider text-ink-400"
                 >
                   {formatDate(
                     article.fechaPublicacion || article.fechaGeneracion
