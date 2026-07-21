@@ -333,11 +333,9 @@ export default function AdminPage() {
                       Detalle del fallo al generar
                     </p>
                     <ul className="mt-2 list-disc space-y-1 pl-4 text-ink-700">
-                      {result.errors
-                        .filter((e) => e.toLowerCase().includes("artículo"))
-                        .map((err) => (
-                          <li key={err}>{err}</li>
-                        ))}
+                      {result.errors.map((err) => (
+                        <li key={err}>{err}</li>
+                      ))}
                     </ul>
                   </div>
                 )}

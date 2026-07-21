@@ -42,10 +42,38 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
     },
   });
 
-  const raw = await callOpenRouter<ArticleRaw>(SYSTEM_PROMPT, userPrompt);
+  let raw: ArticleRaw;
+  try {
+    raw = await callOpenRouter<ArticleRaw>(SYSTEM_PROMPT, userPrompt, {
+      maxTokens: 8192,
+    });
+  } catch (err) {
+    console.error("[generateArticle] OpenRouter failed", {
+      slug: brief.slug,
+      tema: brief.tema,
+      keywordPrincipal: brief.keywordPrincipal,
+      err:
+        err instanceof Error
+          ? {
+              name: err.name,
+              message: err.message,
+              ...("status" in err
+                ? { status: (err as { status?: number }).status }
+                : {}),
+              ...("body" in err
+                ? {
+                    body: String((err as { body?: string }).body).slice(0, 1000),
+                  }
+                : {}),
+            }
+          : err,
+    });
+    throw err;
+  }
 
   const articuloMd = String(raw.articulo_md ?? "").trim();
   if (!articuloMd) {
+    console.error("[generateArticle] missing articulo_md", raw);
     throw new Error("generateArticle: OpenRouter no devolvió articulo_md");
   }
 
@@ -79,7 +107,7 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
 
   const now = new Date().toISOString();
   const article: Article = {
-    id: randomUUID(),
+    id: brief.idArticulo || randomUUID(),
     keywordBase: brief.keywordBase,
     fechaGeneracion: brief.fechaGeneracion || now,
     tema: brief.tema,
@@ -102,15 +130,26 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
     disclaimer: brief.disclaimer,
   };
 
-  const existing = await articlesStore.getBySlug(article.slug);
-  if (existing) {
-    const updated = await articlesStore.update(existing.id, {
-      ...article,
-      id: existing.id,
-    });
-    return { article: updated ?? { ...article, id: existing.id }, html };
-  }
+  try {
+    const existing = await articlesStore.getBySlug(article.slug);
+    if (existing) {
+      const updated = await articlesStore.update(existing.id, {
+        ...article,
+        id: existing.id,
+      });
+      return { article: updated ?? { ...article, id: existing.id }, html };
+    }
 
-  const inserted = await articlesStore.insert(article);
-  return { article: inserted, html };
+    const inserted = await articlesStore.insert(article);
+    return { article: inserted, html };
+  } catch (err) {
+    console.error("[generateArticle] Supabase articles insert/update failed", {
+      slug: article.slug,
+      id: article.id,
+      estado: article.estado,
+      articuloMdLength: article.articuloMd.length,
+      err: err instanceof Error ? err.message : err,
+    });
+    throw err;
+  }
 }

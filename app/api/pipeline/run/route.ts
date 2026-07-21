@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const maxKeywordsToAnalyze =
       typeof body.maxKeywordsToAnalyze === "number"
         ? body.maxKeywordsToAnalyze
-        : 8;
+        : 5;
     const maxArticlesToPublish =
       typeof body.maxArticlesToPublish === "number"
         ? body.maxArticlesToPublish
@@ -57,7 +57,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[api/pipeline/run]", message);
+    console.error("[api/pipeline/run] fatal", {
+      message,
+      err,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

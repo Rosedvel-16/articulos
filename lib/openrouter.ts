@@ -16,6 +16,7 @@ interface OpenRouterChoice {
   message?: {
     content?: string | null;
   };
+  finish_reason?: string | null;
 }
 
 interface OpenRouterResponse {
@@ -25,17 +26,39 @@ interface OpenRouterResponse {
   };
 }
 
+export interface CallOpenRouterOptions {
+  model?: string;
+  maxTokens?: number;
+}
+
 export async function callOpenRouter<T = unknown>(
   systemPrompt: string,
   userPrompt: string,
-  model: string = DEFAULT_MODEL
+  modelOrOptions: string | CallOpenRouterOptions = DEFAULT_MODEL
 ): Promise<T> {
+  const options: CallOpenRouterOptions =
+    typeof modelOrOptions === "string"
+      ? { model: modelOrOptions }
+      : modelOrOptions;
+  const model = options.model ?? DEFAULT_MODEL;
+  const maxTokens = options.maxTokens ?? 4096;
+
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new OpenRouterError(
-      "Falta OPENROUTER_API_KEY. Copia .env.local.example a .env.local y configura la clave."
+    const err = new OpenRouterError(
+      "Falta OPENROUTER_API_KEY en el entorno (Vercel Environment Variables o .env.local)."
     );
+    console.error("[openrouter] missing API key");
+    throw err;
   }
+
+  console.info("[openrouter] request", {
+    model,
+    maxTokens,
+    systemChars: systemPrompt.length,
+    userChars: userPrompt.length,
+    keyPresent: true,
+  });
 
   let response: Response;
   try {
@@ -56,18 +79,24 @@ export async function callOpenRouter<T = unknown>(
         ],
         response_format: { type: "json_object" },
         temperature: 0.4,
+        max_tokens: maxTokens,
       }),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error("[openrouter] network error", message);
     throw new OpenRouterError(`Error de red al llamar OpenRouter: ${message}`);
   }
 
   const rawBody = await response.text();
 
   if (!response.ok) {
+    console.error("[openrouter] HTTP error", {
+      status: response.status,
+      body: rawBody.slice(0, 2000),
+    });
     throw new OpenRouterError(
-      `OpenRouter respondió ${response.status}`,
+      `OpenRouter respondió ${response.status}: ${rawBody.slice(0, 500)}`,
       response.status,
       rawBody
     );
@@ -77,6 +106,7 @@ export async function callOpenRouter<T = unknown>(
   try {
     parsed = JSON.parse(rawBody) as OpenRouterResponse;
   } catch {
+    console.error("[openrouter] invalid envelope JSON", rawBody.slice(0, 2000));
     throw new OpenRouterError(
       "Respuesta de OpenRouter no es JSON válido",
       response.status,
@@ -85,11 +115,19 @@ export async function callOpenRouter<T = unknown>(
   }
 
   if (parsed.error?.message) {
+    console.error("[openrouter] API error field", parsed.error.message);
     throw new OpenRouterError(parsed.error.message, response.status, rawBody);
   }
 
-  const content = parsed.choices?.[0]?.message?.content;
+  const choice = parsed.choices?.[0];
+  const content = choice?.message?.content;
+  const finishReason = choice?.finish_reason ?? null;
+
   if (!content || typeof content !== "string") {
+    console.error(
+      "[openrouter] empty content",
+      JSON.stringify(parsed).slice(0, 2000)
+    );
     throw new OpenRouterError(
       "OpenRouter no devolvió contenido en choices[0].message.content",
       response.status,
@@ -102,13 +140,29 @@ export async function callOpenRouter<T = unknown>(
     .replace(/\s*```$/i, "")
     .trim();
 
+  if (finishReason === "length") {
+    console.error("[openrouter] truncated by max_tokens", {
+      contentLength: cleaned.length,
+      maxTokens,
+      preview: cleaned.slice(0, 500),
+    });
+  }
+
   try {
     return JSON.parse(cleaned) as T;
   } catch {
+    console.error("[openrouter] model content not JSON", {
+      status: response.status,
+      finishReason,
+      contentPreview: cleaned.slice(0, 2000),
+      contentLength: cleaned.length,
+    });
     throw new OpenRouterError(
-      "El contenido del modelo no es JSON parseable",
+      finishReason === "length"
+        ? `OpenRouter truncó la respuesta (finish_reason=length, len=${cleaned.length}, max_tokens=${maxTokens}). El JSON del artículo quedó incompleto.`
+        : `El contenido del modelo no es JSON parseable (len=${cleaned.length}, finish_reason=${finishReason ?? "unknown"}).`,
       response.status,
-      cleaned
+      cleaned.slice(0, 1000)
     );
   }
 }

@@ -149,8 +149,17 @@ export async function runPipeline(
 
   const toPublish = decisions.slice(0, maxArticlesToPublish);
 
+  console.info("[runPipeline] post-approval", {
+    approvedCount: decisions.length,
+    toPublish: toPublish.map((d) => d.keywordRelacionada),
+    openRouterKeyPresent: Boolean(process.env.OPENROUTER_API_KEY),
+  });
+
   for (const decision of toPublish) {
     try {
+      console.info("[runPipeline] generateBrief start", {
+        keyword: decision.keywordRelacionada,
+      });
       const brief = await generateBrief({
         tema,
         keywordBase,
@@ -162,17 +171,45 @@ export async function runPipeline(
         prioridadEditorial: decision.prioridadEditorial,
       });
       summary.briefsGenerated += 1;
+      console.info("[runPipeline] generateBrief ok", {
+        slug: brief.slug,
+        idArticulo: brief.idArticulo,
+      });
 
+      console.info("[runPipeline] generateArticle start", {
+        slug: brief.slug,
+      });
       const { article: published } = await generateArticle(brief);
       summary.articlesPublished += 1;
       summary.publishedUrls.push(
         published.urlPublicacion ?? `/blog/${published.slug}`
       );
+      console.info("[runPipeline] generateArticle ok", {
+        id: published.id,
+        slug: published.slug,
+        url: published.urlPublicacion,
+      });
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
+      const status =
+        err && typeof err === "object" && "status" in err
+          ? (err as { status?: number }).status
+          : undefined;
+      const body =
+        err && typeof err === "object" && "body" in err
+          ? String((err as { body?: string }).body ?? "").slice(0, 800)
+          : undefined;
+      console.error("[runPipeline] post-approval failed", {
+        keyword: decision.keywordRelacionada,
+        message: raw,
+        status,
+        body,
+      });
       const motivo = humanizePipelineError(raw);
       summary.errors.push(
-        `No se pudo escribir el artículo con la keyword aprobada “${decision.keywordRelacionada}”: ${motivo}`
+        `No se pudo escribir el artículo con la keyword aprobada “${decision.keywordRelacionada}”: ${motivo}${
+          status ? ` [HTTP ${status}]` : ""
+        }`
       );
     }
   }

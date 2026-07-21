@@ -50,9 +50,27 @@ function asFaq(value: unknown): FaqItem[] {
     .filter((item) => item.pregunta.length > 0);
 }
 
-function throwIfError(error: { message: string } | null, context: string): void {
+function throwIfError(
+  error: {
+    message: string;
+    code?: string;
+    details?: string;
+    hint?: string;
+  } | null,
+  context: string
+): void {
   if (error) {
-    throw new Error(`${context}: ${error.message}`);
+    console.error(`[storage] ${context}`, {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw new Error(
+      `${context}: ${error.message}${error.code ? ` (code=${error.code})` : ""}${
+        error.details ? ` details=${error.details}` : ""
+      }${error.hint ? ` hint=${error.hint}` : ""}`
+    );
   }
 }
 

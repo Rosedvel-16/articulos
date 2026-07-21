@@ -14,8 +14,17 @@ export function humanizePipelineError(raw: string): string {
   if (msg.includes("serpapi") || msg.includes("google trends")) {
     return "No se pudo consultar Google Trends para esta keyword. Intenta más tarde o usa otra keyword.";
   }
+  if (msg.includes("falta openrouter_api_key")) {
+    return "Falta OPENROUTER_API_KEY en Vercel. Agrégala en Environment Variables y haz Redeploy.";
+  }
+  if (msg.includes("openrouter respondió")) {
+    return raw;
+  }
+  if (msg.includes("no es json parseable") || msg.includes("truncamiento")) {
+    return raw;
+  }
   if (msg.includes("openrouter") || msg.includes("api key")) {
-    return "No se pudo generar el contenido con la IA. Revisa OPENROUTER_API_KEY en Vercel.";
+    return raw;
   }
   if (msg.includes("supabase") || msg.includes("invalid path")) {
     return "No se pudo guardar en la base de datos. Revisa las variables de Supabase en Vercel.";

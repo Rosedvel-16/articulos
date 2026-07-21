@@ -74,7 +74,22 @@ export async function generateBrief(
     ],
   });
 
-  const raw = await callOpenRouter<BriefRaw>(SYSTEM_PROMPT, userPrompt);
+  let raw: BriefRaw;
+  try {
+    raw = await callOpenRouter<BriefRaw>(SYSTEM_PROMPT, userPrompt, {
+      maxTokens: 2048,
+    });
+  } catch (err) {
+    console.error("[generateBrief] OpenRouter failed", {
+      keywordRelacionada: input.keywordRelacionada,
+      tema,
+      err:
+        err instanceof Error
+          ? { name: err.name, message: err.message, ...("status" in err ? { status: (err as { status?: number }).status } : {}), ...("body" in err ? { body: String((err as { body?: string }).body).slice(0, 1000) } : {}) }
+          : err,
+    });
+    throw err;
+  }
 
   const tituloH1 = String(raw.titulo_h1 ?? "").trim();
   const slugRaw = String(
@@ -124,6 +139,15 @@ export async function generateBrief(
       "Contenido informativo de Lernymart. Las decisiones de compra o venta de cursos son responsabilidad del usuario.",
   };
 
-  await articleBriefsStore.insert(brief);
+  try {
+    await articleBriefsStore.insert(brief);
+  } catch (err) {
+    console.error("[generateBrief] Supabase insert article_briefs failed", {
+      slug: brief.slug,
+      idArticulo: brief.idArticulo,
+      err: err instanceof Error ? err.message : err,
+    });
+    throw err;
+  }
   return brief;
 }
