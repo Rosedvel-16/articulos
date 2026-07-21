@@ -5,7 +5,7 @@ import { articlesStore } from "@/lib/storage";
 import type { Article, ArticleBrief, ArticleRaw, FaqItem } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres redactor SEO experto en educación online, creación de cursos, ebooks y marketplaces como Lernymart. Contenido útil, humano, optimizado SEO, lenguaje claro, sin relleno, sin repetir keywords. Markdown con H2/H3, introducción atractiva, conclusión con CTA suave hacia Lernymart cuando encaje, listas cuando sea útil. El TEMA del brief es el eje del artículo: no te desvíes a otro enfoque. Estructura: Introducción, Desarrollo por H2, FAQs, Conclusión.";
+  "Eres redactor SEO experto en educación online, creación de cursos, ebooks y marketplaces como Lernymart. Contenido útil, humano, optimizado SEO, lenguaje claro, sin relleno, sin repetir keywords. Markdown con H2/H3, introducción atractiva, conclusión con CTA suave hacia Lernymart cuando encaje, listas cuando sea útil. El TEMA del brief es el eje del artículo: no te desvíes a otro enfoque. Estructura: Introducción, Desarrollo por H2, FAQs, Conclusión. Responde SOLO en formato JSON válido.";
 
 export async function generateArticle(brief: ArticleBrief): Promise<{
   article: Article;
@@ -33,6 +33,7 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
       "Incluye FAQs finales (mínimo 3, máximo 6).",
       "CTA final suave orientado a aprender, crear o publicar cursos en Lernymart.",
       "No inventes estadísticas falsas ni promesas engañosas.",
+      "Responde SOLO en formato JSON válido.",
     ],
     formato_respuesta: {
       articulo_md: "string — markdown completo del artículo",

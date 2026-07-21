@@ -10,7 +10,7 @@ import type {
 } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres un estratega SEO senior especializado en educación online, marketplaces de cursos, creación de contenido digital y marcas como Lernymart. Construye briefs SEO profesionales: el TEMA del usuario es el eje del artículo (no inventes otro enfoque), la keyword aprobada guía el SEO, analiza intención, estructura semántica, evita keyword stuffing, prioriza CTR, títulos naturales optimizados para Google. SOLO JSON.";
+  "Eres un estratega SEO senior especializado en educación online, marketplaces de cursos, creación de contenido digital y marcas como Lernymart. Construye briefs SEO profesionales: el TEMA del usuario es el eje del artículo (no inventes otro enfoque), la keyword aprobada guía el SEO, analiza intención, estructura semántica, evita keyword stuffing, prioriza CTR, títulos naturales optimizados para Google. Responde SOLO en formato JSON válido.";
 
 function slugify(input: string): string {
   return input
@@ -71,6 +71,7 @@ export async function generateBrief(
       "Mencionar Lernymart de forma natural, sin spam",
       "meta_title máx 60 caracteres",
       "meta_description máx 155 caracteres",
+      "Responde SOLO en formato JSON válido.",
     ],
   });
 

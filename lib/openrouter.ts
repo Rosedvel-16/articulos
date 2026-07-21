@@ -52,11 +52,20 @@ export async function callOpenRouter<T = unknown>(
     throw err;
   }
 
+  // OpenAI exige la palabra "json" en messages cuando response_format=json_object.
+  const jsonHint = " Responde SOLO en formato JSON válido.";
+  const systemContent = /\bjson\b/i.test(systemPrompt)
+    ? systemPrompt
+    : `${systemPrompt}${jsonHint}`;
+  const userContent = /\bjson\b/i.test(userPrompt)
+    ? userPrompt
+    : `${userPrompt}${jsonHint}`;
+
   console.info("[openrouter] request", {
     model,
     maxTokens,
-    systemChars: systemPrompt.length,
-    userChars: userPrompt.length,
+    systemChars: systemContent.length,
+    userChars: userContent.length,
     keyPresent: true,
   });
 
@@ -74,8 +83,8 @@ export async function callOpenRouter<T = unknown>(
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "system", content: systemContent },
+          { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
         temperature: 0.4,

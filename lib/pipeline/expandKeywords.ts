@@ -4,7 +4,7 @@ import { relatedKeywordsStore } from "@/lib/storage";
 import type { ExpandedKeywordRaw, Intencion, RelatedKeyword, TipoKeyword } from "@/types";
 
 const SYSTEM_PROMPT =
-  "Eres un especialista en SEO programático. Generas SOLO keywords cortas y realistas (2 a 4 palabras) que la gente sí busca en Google. Nicho: educación online, cursos, ebooks, vender/comprar formación, Lernymart. Prioriza intención comercial o comparativa. SOLO JSON válido, sin markdown, sin repetir keywords. Evita frases largas tipo tutorial completo.";
+  "Eres un especialista en SEO programático. Generas SOLO keywords cortas y realistas (2 a 4 palabras) que la gente sí busca en Google. Nicho: educación online, cursos, ebooks, vender/comprar formación, Lernymart. Prioriza intención comercial o comparativa. Responde SOLO en formato JSON válido, sin markdown, sin repetir keywords. Evita frases largas tipo tutorial completo.";
 
 const VALID_INTENCIONES: readonly Intencion[] = [
   "informacional",
@@ -68,7 +68,8 @@ export async function expandKeywords(input: {
       "Deben ser búsquedas reales (ej: crear ebook, vender cursos, curso online, precio ebook).",
       "NO generes frases largas ni títulos de artículo.",
       "Incluye variaciones comerciales: precio, mejor, cómo, curso, vender, comprar.",
-      'Formato: { "keywords": [ { "keyword": string, "intencion": "informacional"|"comercial"|"local"|"comparativa", "tipo_keyword": "precio"|"comparativa"|"local"|"informativa"|"confianza"|"resultados"|"tiempo"|"comercial" } ] }',
+      "Responde SOLO en formato JSON válido.",
+      'Formato JSON: { "keywords": [ { "keyword": string, "intencion": "informacional"|"comercial"|"local"|"comparativa", "tipo_keyword": "precio"|"comparativa"|"local"|"informativa"|"confianza"|"resultados"|"tiempo"|"comercial" } ] }',
     ],
     ejemplos_buenos: [
       "crear ebook",
