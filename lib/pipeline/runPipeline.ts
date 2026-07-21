@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { keywordSeedsStore } from "@/lib/storage";
 import { analyzeTrends } from "@/lib/pipeline/analyzeTrends";
 import { expandKeywords } from "@/lib/pipeline/expandKeywords";
+import { attachArticleImage } from "@/lib/pipeline/attachArticleImage";
 import { generateArticle } from "@/lib/pipeline/generateArticle";
 import { generateBrief } from "@/lib/pipeline/generateBrief";
 import {
@@ -9,6 +10,7 @@ import {
   motivoFromDecision,
 } from "@/lib/pipeline/messages";
 import { scoreAndApprove } from "@/lib/pipeline/scoreAndApprove";
+import { articlesStore } from "@/lib/storage";
 import type {
   ArticleDecision,
   KeywordReviewItem,
@@ -179,15 +181,47 @@ export async function runPipeline(
       console.info("[runPipeline] generateArticle start", {
         slug: brief.slug,
       });
-      const { article: published } = await generateArticle(brief);
+      const { article: draft } = await generateArticle(brief);
+      console.info("[runPipeline] generateArticle ok (borrador)", {
+        id: draft.id,
+        slug: draft.slug,
+      });
+
+      let imagenUrl = draft.imagenUrl;
+      try {
+        console.info("[runPipeline] attachArticleImage start", {
+          slug: draft.slug,
+        });
+        imagenUrl = await attachArticleImage(draft, categoria);
+        console.info("[runPipeline] attachArticleImage ok", { imagenUrl });
+      } catch (imgErr) {
+        const imgMsg =
+          imgErr instanceof Error ? imgErr.message : String(imgErr);
+        console.error("[runPipeline] attachArticleImage failed (non-blocking)", {
+          slug: draft.slug,
+          message: imgMsg,
+        });
+        summary.errors.push(
+          `Aviso: el artículo “${draft.slug}” se publicó sin imagen de cabecera (${imgMsg}).`
+        );
+      }
+
+      const published =
+        (await articlesStore.update(draft.id, {
+          estado: "publicado",
+          fechaPublicacion: new Date().toISOString(),
+          ...(imagenUrl ? { imagenUrl } : {}),
+        })) ?? { ...draft, estado: "publicado", imagenUrl };
+
       summary.articlesPublished += 1;
       summary.publishedUrls.push(
         published.urlPublicacion ?? `/blog/${published.slug}`
       );
-      console.info("[runPipeline] generateArticle ok", {
+      console.info("[runPipeline] article published", {
         id: published.id,
         slug: published.slug,
         url: published.urlPublicacion,
+        hasImage: Boolean(published.imagenUrl ?? imagenUrl),
       });
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);

@@ -246,6 +246,7 @@ function articleFromRow(row: Record<string, unknown>): Article {
     fechaPublicacion: asString(row.fecha_publicacion),
     urlPublicacion:
       asString(row.url_publicacion) || (slug ? `/blog/${slug}` : ""),
+    imagenUrl: asString(row.imagen_url) || undefined,
     autor: asString(row.autor) || undefined,
     disclaimer: asString(row.disclaimer) || undefined,
   };
@@ -274,6 +275,7 @@ function articleToRow(row: Article): Record<string, unknown> {
     url_publicacion: row.urlPublicacion ?? `/blog/${row.slug}`,
     autor: row.autor ?? "lernymart SEO Pipeline",
     disclaimer: row.disclaimer ?? "",
+    ...(row.imagenUrl ? { imagen_url: row.imagenUrl } : {}),
   };
 }
 
@@ -332,6 +334,7 @@ function articlePatchToRow(patch: Partial<Article>): Record<string, unknown> {
   }
   if (patch.urlPublicacion !== undefined)
     out.url_publicacion = patch.urlPublicacion;
+  if (patch.imagenUrl !== undefined) out.imagen_url = patch.imagenUrl || null;
   if (patch.autor !== undefined) out.autor = patch.autor;
   if (patch.disclaimer !== undefined) out.disclaimer = patch.disclaimer;
   return out;
@@ -610,11 +613,14 @@ export const articlesStore = {
   },
   getPublished: async (): Promise<Article[]> => {
     const supabase = getSupabase();
+    // Sin filtro de categoría. Rango alto para no truncar el listado del blog.
     const { data, error } = await supabase
       .from("articles")
       .select("*")
       .eq("estado", "publicado")
-      .order("fecha_publicacion", { ascending: false, nullsFirst: false });
+      .order("fecha_publicacion", { ascending: false, nullsFirst: false })
+      .order("fecha_generacion", { ascending: false })
+      .range(0, 999);
     throwIfError(error, "articlesStore.getPublished");
     return ((data ?? []) as Record<string, unknown>[]).map(articleFromRow);
   },

@@ -68,6 +68,7 @@ export async function generateMetadata({
         description: article.metaDescription,
         type: "article",
         publishedTime: article.fechaPublicacion,
+        ...(article.imagenUrl ? { images: [{ url: article.imagenUrl }] } : {}),
       },
     };
   } catch {
@@ -104,14 +105,15 @@ export default async function BlogArticlePage({ params }: PageProps) {
         </Link>
       </div>
 
-      <ArticleHero title={article.tituloH1} categorySeed={categorySeed} />
+      <ArticleHero
+        title={article.tituloH1}
+        categorySeed={categorySeed}
+        imageUrl={article.imagenUrl}
+      />
 
       <div className="mx-auto max-w-3xl px-4 md:px-6">
         <header className="mt-8 mb-10">
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink-950 md:text-4xl">
-            {article.tituloH1}
-          </h1>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center rounded-full border border-ink-950 bg-ink-950 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-400">
               {categoryLabel}
             </span>

@@ -109,6 +109,7 @@ export interface Article {
   estado: string;
   fechaPublicacion: string;
   urlPublicacion?: string;
+  imagenUrl?: string;
   autor?: string;
   disclaimer?: string;
 }

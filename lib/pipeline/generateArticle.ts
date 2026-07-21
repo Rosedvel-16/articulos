@@ -129,9 +129,11 @@ export async function generateArticle(brief: ArticleBrief): Promise<{
     faq,
     cta,
     scoreSeoEstimado,
-    estado: "publicado",
+    // runPipeline marca 'publicado' después de intentar la imagen de cabecera
+    estado: "generado",
     fechaPublicacion: now,
     urlPublicacion: `/blog/${brief.slug}`,
+    imagenUrl: undefined,
     autor: brief.autor,
     disclaimer: brief.disclaimer,
   };

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getSupabase } from "@/lib/supabase";
+import { articlesStore } from "@/lib/storage";
 import type { Article } from "@/types";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function formatDate(iso: string): string {
   if (!iso) return "";
@@ -17,38 +18,18 @@ function formatDate(iso: string): string {
   }
 }
 
-function mapArticlePreview(row: Record<string, unknown>): Pick<
-  Article,
-  "id" | "slug" | "tituloH1" | "metaDescription" | "fechaPublicacion"
-> {
-  return {
-    id: String(row.id ?? row.id_articulo ?? ""),
-    slug: String(row.slug ?? ""),
-    tituloH1: String(row.titulo_h1 ?? ""),
-    metaDescription: String(row.meta_description ?? ""),
-    fechaPublicacion: String(row.fecha_publicacion ?? ""),
-  };
-}
-
 export default async function BlogIndexPage() {
-  let articles: ReturnType<typeof mapArticlePreview>[] = [];
+  let articles: Article[] = [];
   let loadError: string | null = null;
 
   try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from("articles")
-      .select("id, slug, titulo_h1, meta_description, fecha_publicacion, estado")
-      .eq("estado", "publicado")
-      .order("fecha_publicacion", { ascending: false, nullsFirst: false });
-
-    if (error) {
-      loadError = error.message;
-    } else {
-      articles = ((data ?? []) as Record<string, unknown>[]).map(
-        mapArticlePreview
-      );
-    }
+    // Todos los publicados, sin filtro de categoría; orden fecha_publicacion DESC
+    articles = await articlesStore.getPublished();
+    articles.sort((a, b) => {
+      const tb = Date.parse(b.fechaPublicacion || b.fechaGeneracion || "") || 0;
+      const ta = Date.parse(a.fechaPublicacion || a.fechaGeneracion || "") || 0;
+      return tb - ta;
+    });
   } catch (err) {
     loadError = err instanceof Error ? err.message : String(err);
   }
@@ -57,19 +38,29 @@ export default async function BlogIndexPage() {
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
       <header className="mb-12 border-b border-ink-200 pb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-950">
-          <span className="rounded-sm bg-brand-400 px-1.5 py-0.5">Blog de prueba</span>
+          <span className="rounded-sm bg-brand-400 px-1.5 py-0.5">
+            Blog de prueba
+          </span>
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold text-ink-950 md:text-4xl">
           Artículos publicados
         </h1>
         <p className="mt-3 text-ink-600">
-          Salida del pipeline SEO. Los artículos se publican aquí mismo en /blog.
+          Salida del pipeline SEO. Los artículos se publican aquí mismo en
+          /blog.
+          {articles.length > 0 ? (
+            <span className="ml-1 text-ink-500">
+              ({articles.length} publicados)
+            </span>
+          ) : null}
         </p>
       </header>
 
       {loadError ? (
         <div className="rounded-lg border border-ink-950 bg-brand-100 px-6 py-8 text-sm text-ink-900">
-          <p className="font-semibold text-ink-950">No se pudo conectar a Supabase</p>
+          <p className="font-semibold text-ink-950">
+            No se pudo conectar a Supabase
+          </p>
           <p className="mt-2 text-ink-700">{loadError}</p>
           <p className="mt-3 text-ink-600">
             Revisa que existan{" "}
@@ -92,13 +83,15 @@ export default async function BlogIndexPage() {
       ) : (
         <ul className="space-y-8">
           {articles.map((article) => (
-            <li key={article.id}>
+            <li key={article.id || article.slug}>
               <article className="group border-l-2 border-brand-400 pl-5 transition hover:border-ink-950">
                 <time
                   dateTime={article.fechaPublicacion}
                   className="text-xs font-medium uppercase tracking-wider text-ink-400"
                 >
-                  {formatDate(article.fechaPublicacion)}
+                  {formatDate(
+                    article.fechaPublicacion || article.fechaGeneracion
+                  )}
                 </time>
                 <h2 className="mt-1 font-display text-2xl font-semibold text-ink-950 group-hover:text-ink-800">
                   <Link href={`/blog/${article.slug}`}>{article.tituloH1}</Link>
